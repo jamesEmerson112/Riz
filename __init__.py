@@ -15,8 +15,8 @@ No tool in this plugin can unfreeze the arm: a person does that with `/arm unfre
 terminal for one, can still reach the host's socket like any program you run; see the README.)
 
 What it touches: one Unix socket on this machine ($SO101_SOCK or the plugin's `socket` setting, else
-<temp dir>/so101-arm.sock). No network, no shell commands, no file reads or writes, no background
-processes, no credentials.
+<temp dir>/so101-arm.sock). No network, no shell commands, no files outside its own folder (it reads its
+SKILL.md), no background processes, no credentials.
 """
 import json
 import os
@@ -294,10 +294,24 @@ def register(ctx):
                                       "stays parked until the person fixes it and runs /arm check.",
                        {"reason": {"type": "string", "description": "what failed and what you tried"}}))
     ctx.register_hook("pre_tool_call", guard)
-    ctx.register_command("arm", slash_arm, description="SO-101 arm: status, park, check, freeze, unfreeze")
+    ctx.register_command("arm", slash_arm, description="SO-101 arm: status, park, check, freeze, unfreeze",
+                         args_hint="status|park|check|freeze|unfreeze")
 
     skills_dir = Path(__file__).parent / "skills"
     if skills_dir.is_dir() and hasattr(ctx, "register_skill"):
         for child in sorted(skills_dir.iterdir()):
-            if child.is_dir() and (child / "SKILL.md").exists():
-                ctx.register_skill(child.name, child / "SKILL.md")
+            skill_md = child / "SKILL.md"
+            if child.is_dir() and skill_md.exists():
+                ctx.register_skill(child.name, skill_md, description=_skill_description(skill_md))
+
+
+def _skill_description(skill_md):
+    """The `description:` line of a SKILL.md's frontmatter, for the skill's row in <available_skills>."""
+    lines = skill_md.read_text(encoding="utf-8").splitlines()
+    if lines and lines[0].strip() == "---":
+        for line in lines[1:]:
+            if line.strip() == "---":
+                break
+            if line.startswith("description:"):
+                return line.partition(":")[2].strip().strip('"')
+    return ""

@@ -41,7 +41,7 @@ class Ctx:
     def register_command(self, name, handler, **kw):
         self.commands[name] = handler
 
-    def register_skill(self, name, path):
+    def register_skill(self, name, path, **kw):
         self.skills[name] = path
 
 

@@ -38,11 +38,15 @@ class FakeCtx:
     def register_hook(self, name, fn):
         self.hooks[name] = fn
 
-    def register_command(self, name, handler, description="", **kw):
+    def register_command(self, name, handler, description="", args_hint="", **kw):
         self.commands[name] = handler
+        self.command_hints = getattr(self, "command_hints", {})
+        self.command_hints[name] = args_hint
 
-    def register_skill(self, name, path):
+    def register_skill(self, name, path, description="", **kw):
         self.skills[name] = Path(path)
+        self.skill_descriptions = getattr(self, "skill_descriptions", {})
+        self.skill_descriptions[name] = description
 
 
 class FakeHost:
@@ -128,7 +132,9 @@ def test_registration_matches_the_manifest(plugin):
     assert sorted(ctx.tools) == sorted(manifest["provides_tools"])
     assert sorted(ctx.hooks) == sorted(manifest["provides_hooks"]) == ["pre_tool_call"]
     assert all(toolset == "so101_arm" for toolset, _, _ in ctx.tools.values())
-    assert "arm" in ctx.commands and "operate" in ctx.skills and ctx.skills["operate"].exists()
+    assert "arm" in ctx.commands and "operate" in ctx.skills and ctx.skills["operate"].name == "SKILL.md"
+    assert ctx.skills["operate"].exists() and ctx.skill_descriptions["operate"].startswith("How to run the SO-101")
+    assert ctx.command_hints["arm"] == "status|park|check|freeze|unfreeze"
     assert manifest["requires_hermes"].startswith(">=") and isinstance(manifest["version"], str)
 
 

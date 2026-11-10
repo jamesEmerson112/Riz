@@ -108,7 +108,7 @@ Plant a fault from another terminal, then give the agent a job.
 
 The plugin also adds:
 - **`/arm status | park | check | freeze | unfreeze`** for the person in the chat;
-- **the `operate` skill**: the pick sequence, the look-and-correct loop, and what to do for each kind of incident.
+- **the `so101-arm:operate` skill**: the pick sequence, the look-and-correct loop, and what to do for each kind of incident.
 
 ## Safety, in layers
 
@@ -158,7 +158,7 @@ What's different on the real arm:
 
 **The plugin**, which runs inside Hermes:
 - **Network:** none. It talks only to the arm host, over a Unix socket on this machine. The path comes from the plugin's `socket` setting, then `$SO101_SOCK`, then `<temp dir>/so101-arm.sock`.
-- **Files:** none read or written. `arm_look`'s image arrives over the socket.
+- **Files:** none outside its own folder (it reads its `SKILL.md`). `arm_look`'s image arrives over the socket.
 - **Shell commands, background processes, credentials, telemetry:** none.
 - **The `pre_tool_call` hook:** it sees every tool call but acts only on this plugin's motion tools. Each check is one socket round trip with a 10 s timeout. If the host is down, the hook lets the call through and the tool reports the error.
 - **Waiting:** nothing waits for a person. Every call returns or times out: 120 s for an arm move, 10 s for the guard. A hand-off records the incident and returns at once.
