@@ -12,11 +12,11 @@ import mujoco
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from .model import BLOCK_POS
+from .model import BLOCK_POS, BLOCK_TOP
 
 SIZE = 480
 TOP = {"distance": 0.30, "azimuth": 0.0, "elevation": -90.0}        # forward (+x) is up in the image
-SIDE = {"distance": 0.62, "azimuth": 140.0, "elevation": -22.0}
+SIDE = {"distance": 0.58, "azimuth": 235.0, "elevation": -24.0}
 
 
 def _font(size):
@@ -28,13 +28,14 @@ def _font(size):
     return ImageFont.load_default()
 
 
-def _line(scene, a, b, rgba, width):
+def _line(scene, a, b, rgba, width, glow=0.0):
     if scene.ngeom >= scene.maxgeom:
         return
     g = scene.geoms[scene.ngeom]
     mujoco.mjv_initGeom(g, mujoco.mjtGeom.mjGEOM_LINE, np.zeros(3), np.zeros(3), np.zeros(9),
                         np.array(rgba, dtype=np.float32))
     mujoco.mjv_connector(g, mujoco.mjtGeom.mjGEOM_LINE, width, np.array(a, float), np.array(b, float))
+    g.emission = glow                                       # marks keep their colour under the scene's lights
     scene.ngeom += 1
 
 
@@ -66,14 +67,17 @@ class Eye:
         opt = mujoco.MjvOption()
         top_opt = mujoco.MjvOption()
         top_opt.geomgroup[1:5] = 0                             # the table map: arm hidden, so nothing covers the grid
+        top_opt.sitegroup[:] = 0
+        top_opt.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = False
         self.r.update_scene(self.arm.d, self._camera(TOP, (x0, y0, 0.0)), top_opt)
         floor = [g for g in range(self.arm.m.ngeom) if self.arm.m.geom_bodyid[g] == 0]
         for i in range(self.r.scene.ngeom):                    # a plain table: no checker lines across the grid
             g = self.r.scene.geoms[i]
             if g.objtype == mujoco.mjtObj.mjOBJ_GEOM and g.objid in floor:
                 g.matid = -1
+                g.reflectance = 0.0                            # no mirror image of the grid on the floor
                 g.rgba[:] = (0.16, 0.20, 0.28, 1.0)
-        z = 0.0008
+        z = BLOCK_TOP + 0.0008      # the grid lies in the plane of the block's top face: no parallax when reading it
         for k in range(-6, 7):                                  # a 10 mm grid, +-60 mm around the taught spot
             strong = k % 5 == 0
             rgba, width = ((0.95, 0.95, 1.0, 0.95), 2.0) if strong else ((0.75, 0.8, 0.9, 0.6), 1.0)
@@ -82,17 +86,18 @@ class Eye:
             _line(self.r.scene, (x0 + off, y0 - 0.06, z), (x0 + off, y0 + 0.06, z), rgba, width)
         tip, _ = self.arm.tip()                                 # where the jaws are now (blue)
         blue = (0.35, 0.65, 1.0, 1.0)
-        _line(self.r.scene, (tip[0] - 0.006, tip[1] - 0.006, 0.033), (tip[0] + 0.006, tip[1] + 0.006, 0.033), blue, 3.0)
-        _line(self.r.scene, (tip[0] - 0.006, tip[1] + 0.006, 0.033), (tip[0] + 0.006, tip[1] - 0.006, 0.033), blue, 3.0)
-        red = (1.0, 0.2, 0.2, 1.0)                              # the aim: where arm_approach will go
-        _line(self.r.scene, (ax - 0.008, ay, 0.032), (ax + 0.008, ay, 0.032), red, 4.0)
-        _line(self.r.scene, (ax, ay - 0.008, 0.032), (ax, ay + 0.008, 0.032), red, 4.0)
+        for s in (1, -1):
+            _line(self.r.scene, (tip[0] - 0.006, tip[1] - s * 0.006, z + 0.0025),
+                  (tip[0] + 0.006, tip[1] + s * 0.006, z + 0.0025), blue, 4.0, glow=1.0)
+        red = (1.0, 0.15, 0.15, 1.0)                            # the aim: where arm_approach will go
+        _line(self.r.scene, (ax - 0.011, ay, z + 0.0015), (ax + 0.011, ay, z + 0.0015), red, 5.0, glow=1.0)
+        _line(self.r.scene, (ax, ay - 0.011, z + 0.0015), (ax, ay + 0.011, z + 0.0015), red, 5.0, glow=1.0)
         top = Image.fromarray(self.r.render()).convert("RGB")
         d = ImageDraw.Draw(top, "RGBA")
         for k in (-50, 0, 50):
-            px, py = self._px(x0 + k / 1000.0, y0 - 0.062)
+            px, py = self._px(x0 + k / 1000.0, y0 - 0.062, z)
             d.text((px + 4, py - 8), f"x{k:+d}" if k else "x 0", font=self.small, fill=(255, 255, 255, 230))
-            px, py = self._px(x0 - 0.062, y0 + k / 1000.0)
+            px, py = self._px(x0 - 0.062, y0 + k / 1000.0, z)
             d.text((px - 14, py + 2), f"y{k:+d}" if k else "y 0", font=self.small, fill=(255, 255, 255, 230))
         d.rectangle([0, 0, SIZE, 24], fill=(10, 14, 22, 210))
         d.text((8, 4), f"table map (arm hidden) · grid 10 mm · red + aim ({aim_mm[0]:+.0f}, {aim_mm[1]:+.0f}) mm · blue x jaws",
@@ -103,7 +108,7 @@ class Eye:
         top_path = self.out / f"look-{self.n:03d}-top.png"
         top.save(top_path)
 
-        self.r.update_scene(self.arm.d, self._camera(SIDE, (0.16, 0.0, 0.08)), opt)
+        self.r.update_scene(self.arm.d, self._camera(SIDE, (0.14, 0.0, 0.08)), opt)
         side = Image.fromarray(self.r.render()).convert("RGB")
         side_path = self.out / f"look-{self.n:03d}-side.png"
         side.save(side_path)

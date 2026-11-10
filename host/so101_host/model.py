@@ -44,7 +44,7 @@ def _body(spec, name):
 
 def build(block_pos=BLOCK_POS) -> mujoco.MjModel:
     if not (MENAGERIE / "scene_box.xml").exists():
-        raise FileNotFoundError(f"{MENAGERIE} is missing; run prototypes/arm-sim/setup.sh first")
+        raise FileNotFoundError(f"{MENAGERIE} is missing; run: python -m so101_host fetch-model")
     spec = mujoco.MjSpec.from_file(str(MENAGERIE / "scene_box.xml"))
     _body(spec, "box").pos = list(block_pos)
     finder = getattr(spec, "geom", None) or getattr(spec, "find_geom")

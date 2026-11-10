@@ -1,11 +1,12 @@
 """Record the README's GIFs from the sim (MuJoCo offscreen; on Linux set MUJOCO_GL=egl).
 
-    python tools/make_media.py            # writes media/pick.gif, media/heal.gif, media/stall.gif, media/still.png
+    python tools/make_media.py     # writes media/correct.gif, pick.gif, heal.gif, stall.gif and still.png
 
 Each GIF drives the same Skills and Watchdog the arm host uses, step by step, and captions every frame
 with the tool call the agent would make and what the watchdog said.
 """
 import sys
+import tempfile
 from pathlib import Path
 
 import mujoco
@@ -19,7 +20,7 @@ from so101_host.arm import SimArm  # noqa: E402
 from so101_host.host import Skills, Watchdog  # noqa: E402
 from so101_host.record import RunRecorder  # noqa: E402
 
-W, H = 640, 400
+W, H = 560, 350
 OUT = ROOT / "media"
 
 
@@ -38,12 +39,12 @@ F_BIG, F_SMALL = font(20), font(15)
 class Film:
     """Frames of the sim with a caption bar: the tool call on top, the watchdog's words below."""
 
-    def __init__(self, arm, *, every=4):
+    def __init__(self, arm, *, every=8):
         self.arm, self.every, self.n = arm, every, 0
         self.r = mujoco.Renderer(arm.m, H, W)
         self.cam = mujoco.MjvCamera()
-        self.cam.lookat[:] = [0.16, 0.0, 0.08]
-        self.cam.distance, self.cam.azimuth, self.cam.elevation = 0.62, 140.0, -22.0
+        self.cam.lookat[:] = [0.14, 0.0, 0.08]
+        self.cam.distance, self.cam.azimuth, self.cam.elevation = 0.58, 235.0, -24.0
         self.opt = mujoco.MjvOption()
         self.opt.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = True     # draw the ultrasonic ray
         self.frames, self.call, self.note, self.tone = [], "", "", "ok"
@@ -69,13 +70,26 @@ class Film:
         for _ in range(repeat):
             self.frames.append(img)
 
+    def show(self, path, call, note="", tone="ok", hold=30):
+        """A still (the agent's camera image) full-frame, with the same caption bars."""
+        img = Image.open(path).convert("RGB")
+        img.thumbnail((W, H - 64))
+        frame = Image.new("RGB", (W, H), (12, 16, 24))
+        frame.paste(img, ((W - img.width) // 2, 34 + (H - 64 - img.height) // 2))
+        d = ImageDraw.Draw(frame, "RGBA")
+        d.text((12, 6), call, font=F_BIG, fill=(235, 240, 250))
+        if note:
+            colour = {"bad": (255, 120, 110), "warn": (255, 196, 90), "ok": (130, 230, 160)}[tone]
+            d.text((12, H - 25), note, font=F_SMALL, fill=colour)
+        self.frames.extend([frame] * hold)
+
     def say(self, call, note="", tone="ok", hold=8):
         self.call, self.note, self.tone = call, note, tone
         self.snap(repeat=hold)
 
-    def save(self, name, ms=60):
+    def save(self, name, ms=90):
         path = OUT / name
-        frames = [f.quantize(colors=128, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE) for f in self.frames]
+        frames = [f.quantize(colors=96, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE) for f in self.frames]
         frames[0].save(path, save_all=True, append_images=frames[1:], duration=ms, loop=0, optimize=True)
         print(f"{path}  {len(frames)} frames  {path.stat().st_size // 1024} KB")
         return path
@@ -133,6 +147,36 @@ def heal():
     return film.save("heal.gif")
 
 
+def correct():
+    """The hero: the block was bumped, the pick misses, the agent looks at the grid and corrects its aim."""
+    from so101_host.camera import Eye
+    arm, skills, dog = bench()
+    film = Film(arm)
+    run(film, skills, dog, "go_home", "arm_go_home")
+    arm.shift_block(30, -10)
+    film.say("(someone bumps the block: 30 mm forward, 10 mm right)", "the arm was taught where the block was", "warn",
+             hold=16)
+    run(film, skills, dog, "approach", "arm_pick_up")
+    g = run(film, skills, dog, "grip", "arm_pick_up")
+    film.say("arm_pick_up", f"failed at grip: the jaws closed on nothing (holding: {g['grasp']['holding']})", "bad",
+             hold=20)
+    run(film, skills, dog, "release", "arm_release")
+    run(film, skills, dog, "go_home", "arm_go_home")
+    eye = Eye(arm, tempfile.mkdtemp(prefix="so101-media-"))
+    seen = eye.look((0, 0))
+    film.show(seen["top"], "arm_look", "the agent reads the grid: block at +30, -10 mm from the red aim", "warn",
+              hold=40)
+    preview = eye.look((30, -10))
+    film.show(preview["top"], "arm_look dx_mm=30 dy_mm=-10", "preview: the aim now sits on the block", "ok", hold=28)
+    film.say("arm_pick_up dx_mm=30 dy_mm=-10", "corrections are limited to 40 mm per axis, in code", "ok", hold=8)
+    skills.approach((30.0, -10.0))
+    g = skills.grip()
+    l = skills.lift()
+    film.say("arm_pick_up dx_mm=30 dy_mm=-10", f"picked up: holding {l['grasp']['holding']} after the correction",
+             "ok", hold=30)
+    return film.save("correct.gif")
+
+
 def stall():
     arm, skills, dog = bench()
     film = Film(arm)
@@ -152,6 +196,7 @@ if __name__ == "__main__":
     pick()
     heal()
     stall()
+    correct()
     arm, skills, _ = bench()
     skills.go_home()
     Film(arm).snap()
