@@ -76,12 +76,12 @@ uv pip install --python .venv/bin/python -e './host[sim]'
 
 ### Things to try
 
-Plant a fault from another terminal, then give the agent a job.
+Plant a fault from another terminal, then give the agent a job. Between tries, run `.venv/bin/python -m so101_host clear`: it lifts every planted fault and puts a bumped block back. Without it, a try carries over the last one's faults; a block left shifted, for one, makes the next pick miss.
 
 | Do this | Then ask | What happens |
 |---|---|---|
-| `.venv/bin/python -m so101_host fault block_shift dx_mm=30 dy_mm=-10` | "Pick up the block." | The grip closes on nothing. The agent looks, reads the offset, retries with `dx_mm`/`dy_mm` and picks it up. |
-| `.venv/bin/python -m so101_host fault us_frozen` | "Pick up the block." | The watchdog parks the arm mid-approach. The agent restarts the sensor, the fix is verified at home, and the pick finishes. |
+| `.venv/bin/python -m so101_host fault block_shift dx_mm=30 dy_mm=-10` | "Pick up the block, then put it back." | The grip closes on nothing. The agent looks, reads the offset, retries with `dx_mm`/`dy_mm` and picks it up. |
+| `.venv/bin/python -m so101_host fault us_frozen` | "Pick up the block, then put it back." | The watchdog parks the arm mid-approach. The agent restarts the sensor, the fix is verified at home, and the pick finishes. |
 | `.venv/bin/python -m so101_host fault joint_stuck joint=2` | "Reach for the block." | The elbow stalls and the arm parks. `arm_check` fails again, so the incident goes to you. Run `.venv/bin/python -m so101_host clear`, then `/arm check` in the chat. |
 | `/arm freeze` in the chat | "Wave at me." | The guard refuses and the agent tells you why. Only `/arm unfreeze` lets it move again. |
 
