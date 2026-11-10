@@ -1,0 +1,36 @@
+name: so101-arm
+version: "0.1.0"
+manifest_version: 2
+api_version: 1
+description: >-
+  Give Hermes a robot arm, safely: SO-101 skills (go home, reach, approach, grip, lift, release,
+  pick up, play a taught motion, park) served by a local arm host that runs a MuJoCo sim or a real
+  arm through LeRobot. A plain-code watchdog parks the arm on faults, a pre_tool_call guard blocks
+  motion until a repair is verified, and only a person can unfreeze the arm.
+author: jamesEmerson112
+license: MIT
+homepage: https://github.com/jamesEmerson112/hermes-so101-arm
+tags: [robotics, robot-arm, so-101, lerobot, mujoco, hardware, safety]
+requires_hermes: ">=0.21.6"
+provides_tools:
+  - arm_go_home
+  - arm_reach
+  - arm_approach
+  - arm_grip
+  - arm_lift
+  - arm_release
+  - arm_park
+  - arm_play
+  - arm_pick_up
+  - arm_look
+  - arm_status
+  - arm_restart_sensor
+  - arm_check
+  - arm_handoff
+provides_hooks:
+  - pre_tool_call
+config_schema:
+  socket:
+    type: str
+    default: ""
+    description: "Path of the arm host's Unix socket (default: $SO101_SOCK, else <temp dir>/so101-arm.sock)"

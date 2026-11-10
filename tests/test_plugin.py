@@ -1,0 +1,228 @@
+"""The plugin itself: registration, every tool, the pre_tool_call guard and /arm, against a fake arm host.
+No Hermes, no MuJoCo, no hardware: python -m pytest tests"""
+import importlib.util
+import json
+import os
+import socket
+import tempfile
+import threading
+from pathlib import Path
+
+import pytest
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_plugin():
+    spec = importlib.util.spec_from_file_location("so101_arm_plugin", ROOT / "__init__.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class FakeCtx:
+    """Records what register() asks for, like Hermes's PluginContext."""
+
+    def __init__(self, config=None):
+        self.tools, self.hooks, self.commands, self.skills = {}, {}, {}, {}
+        self.config = config or {}
+
+    def get_config(self, key, default=None):
+        return self.config.get(key, default)
+
+    def register_tool(self, *, name, toolset, schema, handler, **kw):
+        assert schema["name"] == name and schema["description"]
+        self.tools[name] = (toolset, schema, handler)
+
+    def register_hook(self, name, fn):
+        self.hooks[name] = fn
+
+    def register_command(self, name, handler, description="", **kw):
+        self.commands[name] = handler
+
+    def register_skill(self, name, path):
+        self.skills[name] = Path(path)
+
+
+class FakeHost:
+    """A stand-in arm host on a Unix socket: canned replies, and a log of every request."""
+
+    def __init__(self, path):
+        self.path, self.log = str(path), []
+        self.state = {"incidents": [], "status": [0] * 6, "frozen": None, "grasp_holding": True}
+        self.srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.srv.bind(self.path)
+        self.srv.listen(8)
+        threading.Thread(target=self._serve, daemon=True).start()
+
+    def reply(self, req):
+        op, st = req.get("op"), self.state
+        if op == "status":
+            return {"ok": True, "arm": "sim", "status": st["status"], "frozen": st["frozen"], "parked": True,
+                    "incidents": st["incidents"], "handed_off": [i for i in st["incidents"] if i.get("handed_off")],
+                    "grasp": {"holding": st["grasp_holding"]}}
+        if op == "skill":
+            res = {"arrived": True}
+            if req["name"] in ("grip", "lift"):
+                res["grasp"] = {"holding": st["grasp_holding"]}
+            return {"ok": True, "skill": req["name"], "result": res}
+        if op == "play":
+            return {"ok": True, "skill": "play:" + req["motion"], "result": {"arrived": True}}
+        if op == "read":
+            return {"ok": True, "pos": {"gripper.pos": 60.0}}
+        if op == "distance":
+            return {"ok": True, "row": {"mm": 120, "us": 700, "st": "ok"}}
+        if op == "motions":
+            return {"ok": True, "motions": ["wave"]}
+        if op == "look":
+            return {"ok": True, "top": "/tmp/look-001-top.png", "side": "/tmp/look-001-side.png",
+                    "aim_mm": req["aim_mm"], "grid_mm": 10}
+        if op == "repair":
+            return {"ok": True, "action": req["action"], "verified": True}
+        if op == "handoff":
+            return {"ok": True, "id": req["id"], "handed_off": 1.0, "handoff_reason": req["reason"]}
+        if op in ("freeze", "unfreeze"):
+            st["frozen"] = req.get("by") if op == "freeze" else None
+            return {"ok": True, "frozen": st["frozen"]}
+        return {"ok": False, "error": "unknown op"}
+
+    def _serve(self):
+        while True:
+            try:
+                conn, _ = self.srv.accept()
+            except OSError:
+                return
+            with conn, conn.makefile("rw", encoding="utf-8") as f:
+                for line in f:
+                    req = json.loads(line)
+                    self.log.append(req)
+                    f.write(json.dumps(self.reply(req)) + "\n")
+                    f.flush()
+
+    def close(self):
+        self.srv.close()
+
+
+@pytest.fixture
+def plugin(tmp_path):
+    sock = Path(tempfile.mkdtemp(prefix="so101p-")) / "arm.sock"     # short path: macOS caps socket paths
+    host = FakeHost(sock)
+    mod = load_plugin()
+    ctx = FakeCtx(config={"socket": str(sock)})
+    mod.register(ctx)
+    yield mod, ctx, host
+    host.close()
+
+
+def run(ctx, tool, args=None):
+    return json.loads(ctx.tools[tool][2](args or {}, task_id="t1"))
+
+
+def test_registration_matches_the_manifest(plugin):
+    mod, ctx, _ = plugin
+    manifest = yaml.safe_load((ROOT / "plugin.yaml").read_text())
+    assert sorted(ctx.tools) == sorted(manifest["provides_tools"])
+    assert sorted(ctx.hooks) == sorted(manifest["provides_hooks"]) == ["pre_tool_call"]
+    assert all(toolset == "so101_arm" for toolset, _, _ in ctx.tools.values())
+    assert "arm" in ctx.commands and "operate" in ctx.skills and ctx.skills["operate"].exists()
+    assert manifest["requires_hermes"].startswith(">=") and isinstance(manifest["version"], str)
+
+
+def test_every_tool_returns_json_and_reaches_the_host(plugin):
+    mod, ctx, host = plugin
+    for tool in ("arm_go_home", "arm_reach", "arm_approach", "arm_grip", "arm_lift", "arm_release", "arm_park"):
+        out = run(ctx, tool)
+        assert out["ok"] and out["skill"] == mod.SKILLS[tool][0]
+    assert run(ctx, "arm_play", {"motion": "wave", "speed": 3})["ok"]
+    assert host.log[-1] == {"op": "play", "motion": "wave", "speed": 1.0}     # clamped: never faster
+    assert not run(ctx, "arm_play", {})["ok"]
+    st = run(ctx, "arm_status")
+    assert st["motions"] == ["wave"] and st["distance"]["mm"] == 120
+    assert run(ctx, "arm_restart_sensor")["verified"] and run(ctx, "arm_check")["verified"]
+
+
+def test_offsets_reach_the_host_and_bad_ones_are_refused(plugin):
+    mod, ctx, host = plugin
+    assert run(ctx, "arm_approach", {"dx_mm": 30, "dy_mm": -10})["ok"]
+    assert host.log[-1] == {"op": "skill", "name": "approach", "offset_mm": [30.0, -10.0]}
+    assert run(ctx, "arm_approach", {})["ok"] and "offset_mm" not in host.log[-1]
+    assert not run(ctx, "arm_approach", {"dx_mm": "north"})["ok"]
+    out = run(ctx, "arm_pick_up", {"dx_mm": 20})
+    assert out["picked_up"] and host.log[-3]["offset_mm"] == [20.0, 0.0]
+    look = run(ctx, "arm_look", {"dx_mm": 5})
+    assert look["top"].endswith("top.png") and host.log[-1]["aim_mm"] == [5.0, 0.0]
+    assert ctx.hooks["pre_tool_call"]("arm_look", {}, task_id="t1") is None    # looking never moves the arm
+
+
+def test_pick_up_stops_at_the_first_failed_step(plugin):
+    mod, ctx, host = plugin
+    assert run(ctx, "arm_pick_up")["picked_up"]
+    host.state["grasp_holding"] = False
+    out = run(ctx, "arm_pick_up")
+    assert not out["picked_up"] and out["failed_at"] == "grip" and len(out["steps"]) == 2
+
+
+def test_the_guard_blocks_motion_while_an_incident_is_open(plugin):
+    mod, ctx, host = plugin
+    guard = ctx.hooks["pre_tool_call"]
+    assert guard("arm_reach", {}, task_id="t1") is None
+    host.state["incidents"] = [{"id": "inc-1", "kind": "us_frozen", "summary": "Ultrasonic output is frozen"}]
+    block = guard("arm_reach", {}, task_id="t1")
+    assert block["action"] == "block" and "arm_restart_sensor" in block["message"]
+    assert guard("arm_status", {}, task_id="t1") is None            # reading and repairing stay allowed
+    assert guard("arm_restart_sensor", {}, task_id="t1") is None
+    assert guard("arm_park", {}, task_id="t1") is None
+    assert guard("terminal", {}, task_id="t1") is None               # other plugins' tools: not ours to judge
+    host.state["incidents"] = [{"id": "inc-2", "kind": "joint_stall", "summary": "Elbow flex stopped",
+                                "handed_off": 3.0}]
+    assert "person" in guard("arm_pick_up", {}, task_id="t1")["message"]
+
+
+def test_the_guard_blocks_on_servo_alarms_and_a_freeze(plugin):
+    mod, ctx, host = plugin
+    guard = ctx.hooks["pre_tool_call"]
+    host.state["status"] = [0, 0, 0, 0, 0, 32]
+    assert "alarm" in guard("arm_grip", {}, task_id="t1")["message"]
+    host.state["status"] = [0] * 6
+    ctx.commands["arm"]("freeze")
+    assert "/arm unfreeze" in guard("arm_go_home", {}, task_id="t1")["message"]
+    ctx.commands["arm"]("unfreeze")
+    assert guard("arm_go_home", {}, task_id="t1") is None
+
+
+def test_handoff_needs_an_open_incident(plugin):
+    mod, ctx, host = plugin
+    assert not run(ctx, "arm_handoff", {"reason": "x"})["ok"]
+    host.state["incidents"] = [{"id": "inc-3", "kind": "us_noisy", "summary": "jitters"}]
+    out = run(ctx, "arm_handoff", {"reason": "sensor keeps jittering after two restarts"})
+    assert out["ok"] and out["id"] == "inc-3"
+
+
+def test_slash_command_status_reads_like_a_sentence(plugin):
+    mod, ctx, host = plugin
+    host.state["incidents"] = [{"id": "inc-1", "kind": "us_frozen", "summary": "frozen at 130 mm"}]
+    text = ctx.commands["arm"]("")
+    assert "inc-1 us_frozen: frozen at 130 mm" in text
+    assert ctx.commands["arm"]("dance").startswith("usage")
+
+
+def test_no_host_is_an_error_reply_not_an_exception(tmp_path):
+    mod = load_plugin()
+    ctx = FakeCtx(config={"socket": str(tmp_path / "nobody-home.sock")})
+    mod.register(ctx)
+    out = run(ctx, "arm_go_home")
+    assert not out["ok"] and "python -m so101_host serve" in out["error"]
+    assert ctx.hooks["pre_tool_call"]("arm_go_home", {}, task_id="t1") is None   # the tool reports it
+
+
+def test_the_plugin_needs_only_the_standard_library():
+    src = (ROOT / "__init__.py").read_text()
+    imports = {line.split()[1].split(".")[0] for line in src.splitlines() if line.startswith(("import ", "from "))}
+    assert imports <= {"json", "os", "socket", "tempfile", "pathlib"}, imports
+    assert not any(p.suffix in (".pyc", ".pyo") for p in ROOT.rglob("*") if ".git" not in p.parts
+                   and "vendor" not in p.parts and "__pycache__" not in p.parts)
+
+
+if __name__ == "__main__":
+    raise SystemExit(pytest.main([__file__, "-q"]))

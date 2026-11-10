@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "so101-arm-host"
+version = "0.1.0"
+description = "Arm host for the so101-arm Hermes plugin: owns an SO-101 (MuJoCo sim or real, through LeRobot), runs skills, and parks the arm on faults."
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = "MIT"
+dependencies = ["numpy>=1.24,<3"]
+
+[project.optional-dependencies]
+sim = ["mujoco>=3.3,<4", "pillow>=10,<12"]
+real = ["lerobot[feetech]>=0.7,<0.8"]
+test = ["pytest>=8,<9"]
+
+[project.scripts]
+so101-host = "so101_host.__main__:main"
+
+[tool.setuptools]
+packages = ["so101_host"]
+
+[tool.setuptools.package-data]
+so101_host = ["library/*.json"]
