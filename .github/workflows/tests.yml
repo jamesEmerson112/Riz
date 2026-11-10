@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  plugin:
+    name: plugin (fake arm host)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install pytest and PyYAML (packages at least 3 days old)
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python --exclude-newer "$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)" pytest pyyaml
+      - run: .venv/bin/python -m pytest -q tests
+
+  sim:
+    name: arm host and plugin on the MuJoCo sim
+    runs-on: ubuntu-latest
+    env:
+      MUJOCO_GL: osmesa
+      PYOPENGL_PLATFORM: osmesa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Software OpenGL for the camera
+        run: sudo apt-get update && sudo apt-get install -y libosmesa6
+      - name: Install the arm host (packages at least 3 days old)
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python --exclude-newer "$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)" -e './host[sim,test]' pyyaml
+      - name: Fetch the SO-101 model (MuJoCo Menagerie, pinned commit)
+        run: .venv/bin/python -m so101_host fetch-model
+      - run: .venv/bin/python -m pytest -q host/tests
