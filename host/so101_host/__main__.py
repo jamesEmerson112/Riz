@@ -66,17 +66,24 @@ def cmd_poses():
         print(f"{name:12s} {pose}")
 
 
+MENAGERIE_URL = "https://github.com/google-deepmind/mujoco_menagerie"
+MENAGERIE_SHA = "98a70c569c4c1b6da467a20012f766ee1f8dc521"     # the commit this sim was built and tested on
+
+
 def cmd_fetch_model():
-    root = Path(__file__).resolve().parent.parent / "vendor"
-    dest = root / "menagerie"
-    if (dest / "robotstudio_so101").is_dir():
-        print(f"{dest / 'robotstudio_so101'} is already there")
+    from .model import MENAGERIE
+    dest = MENAGERIE.parent
+    if (MENAGERIE / "scene_box.xml").exists():
+        print(f"{MENAGERIE} is already there")
         return
-    root.mkdir(parents=True, exist_ok=True)
-    url = "https://github.com/google-deepmind/mujoco_menagerie"
-    print(f"cloning {url} (sparse: robotstudio_so101 only) into {dest}")
-    subprocess.run(["git", "clone", "--depth", "1", "--filter=blob:none", "--sparse", url, str(dest)], check=True)
-    subprocess.run(["git", "-C", str(dest), "sparse-checkout", "set", "robotstudio_so101"], check=True)
+    dest.mkdir(parents=True, exist_ok=True)
+    print(f"fetching robotstudio_so101 from {MENAGERIE_URL} at {MENAGERIE_SHA[:12]} into {dest}")
+    git = ["git", "-C", str(dest)]
+    for step in (["init", "-q"], ["remote", "add", "origin", MENAGERIE_URL],
+                 ["sparse-checkout", "set", "robotstudio_so101"],
+                 ["fetch", "-q", "--depth", "1", "--filter=blob:none", "origin", MENAGERIE_SHA],
+                 ["checkout", "-q", "FETCH_HEAD"]):
+        subprocess.run(git + step, check=True)
     print("done")
 
 

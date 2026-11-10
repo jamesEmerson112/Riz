@@ -4,8 +4,8 @@ and a wrist ultrasonic modelled as a rangefinder.
 An HC-SR04 on the wrist bracket points along the gripper's approach axis, mounted 50 mm or more
 behind the fingertips. The rangefinder site below copies that placement.
 
-The model files come from MuJoCo Menagerie (Apache-2.0). `python -m so101_host fetch-model` (or
-`host/fetch_model.sh`) puts them in host/vendor/; $SO101_MENAGERIE points elsewhere.
+The model files come from MuJoCo Menagerie (Apache-2.0). `python -m so101_host fetch-model` puts them in
+host/vendor/ at a pinned commit; $SO101_MENAGERIE points at another robotstudio_so101 folder.
 """
 import os
 from pathlib import Path
