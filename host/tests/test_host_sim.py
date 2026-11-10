@@ -2,6 +2,7 @@
 
 Needs the sim extra (`pip install -e 'host[sim]'`) and the model (`python -m so101_host fetch-model`).
 """
+import base64
 import os
 import subprocess
 import sys
@@ -106,6 +107,9 @@ def test_the_agent_corrects_its_aim_from_the_grid_when_the_block_moved(host):
     host("skill", name="go_home")
     seen = host("look")
     assert Path(seen["top"]).exists() and Path(seen["side"]).exists() and seen["grid_mm"] == 10
+    assert "top_png_b64" not in seen
+    inline = host("look", aim_mm=[30, -10], inline=True)              # what the plugin hands a vision model
+    assert base64.b64decode(inline["top_png_b64"]).startswith(b"\x89PNG") and inline["aim_mm"] == [30, -10]
     assert host("skill", name="approach", offset_mm=[30, -10])["result"]["arrived"]
     assert host("skill", name="grip")["result"]["grasp"]["holding"]
     assert host("skill", name="lift")["result"]["grasp"]["holding"]

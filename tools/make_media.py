@@ -1,16 +1,17 @@
 """Record the README's GIFs from the sim (MuJoCo offscreen; on Linux set MUJOCO_GL=egl).
 
-    python tools/make_media.py     # writes media/correct.gif, pick.gif, heal.gif, stall.gif and still.png
+    python tools/make_media.py          # writes media/correct.gif, pick.gif, heal.gif, stall.gif and still.png
+    python tools/make_media.py heal     # just one
 
 Each GIF drives the same Skills and Watchdog the arm host uses, step by step, and captions every frame
 with the tool call the agent would make and what the watchdog said.
 """
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 import mujoco
-import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,7 +34,16 @@ def font(size):
     return ImageFont.load_default()
 
 
-F_BIG, F_SMALL = font(20), font(15)
+F_SMALL = font(15)
+
+
+def fit(text, size, room=W - 24):
+    """The largest font, from size down, that fits the text in the bar: a caption never runs off the frame."""
+    for s in range(size, 10, -1):
+        f = font(s)
+        if f.getlength(text) <= room:
+            return f
+    raise ValueError(f"caption too long for a {W}px frame: {text!r}")
 
 
 class Film:
@@ -60,11 +70,11 @@ class Film:
         img = Image.fromarray(self.r.render()).convert("RGB")
         d = ImageDraw.Draw(img, "RGBA")
         d.rectangle([0, 0, W, 34], fill=(12, 16, 24, 215))
-        d.text((12, 6), self.call, font=F_BIG, fill=(235, 240, 250))
+        d.text((12, 6), self.call, font=fit(self.call, 20), fill=(235, 240, 250))
         if self.note:
             colour = {"bad": (255, 120, 110), "warn": (255, 196, 90), "ok": (130, 230, 160)}[self.tone]
             d.rectangle([0, H - 30, W, H], fill=(12, 16, 24, 215))
-            d.text((12, H - 25), self.note, font=F_SMALL, fill=colour)
+            d.text((12, H - 25), self.note, font=fit(self.note, 15), fill=colour)
         row = self.arm._last_d or {}
         d.text((W - 150, 42), f"wrist: {row.get('mm', '-')} mm", font=F_SMALL, fill=(255, 255, 255))
         for _ in range(repeat):
@@ -77,10 +87,10 @@ class Film:
         frame = Image.new("RGB", (W, H), (12, 16, 24))
         frame.paste(img, ((W - img.width) // 2, 34 + (H - 64 - img.height) // 2))
         d = ImageDraw.Draw(frame, "RGBA")
-        d.text((12, 6), call, font=F_BIG, fill=(235, 240, 250))
+        d.text((12, 6), call, font=fit(call, 20), fill=(235, 240, 250))
         if note:
             colour = {"bad": (255, 120, 110), "warn": (255, 196, 90), "ok": (130, 230, 160)}[tone]
-            d.text((12, H - 25), note, font=F_SMALL, fill=colour)
+            d.text((12, H - 25), note, font=fit(note, 15), fill=colour)
         self.frames.extend([frame] * hold)
 
     def say(self, call, note="", tone="ok", hold=8):
@@ -91,6 +101,7 @@ class Film:
         path = OUT / name
         frames = [f.quantize(colors=96, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE) for f in self.frames]
         frames[0].save(path, save_all=True, append_images=frames[1:], duration=ms, loop=0, optimize=True)
+        self.r.close()
         print(f"{path}  {len(frames)} frames  {path.stat().st_size // 1024} KB")
         return path
 
@@ -154,8 +165,8 @@ def correct():
     film = Film(arm)
     run(film, skills, dog, "go_home", "arm_go_home")
     arm.shift_block(30, -10)
-    film.say("(someone bumps the block: 30 mm forward, 10 mm right)", "the arm was taught where the block was", "warn",
-             hold=16)
+    film.say("(someone bumps the block)", "it moved 30 mm forward and 10 mm right; the arm still aims at the old spot",
+             "warn", hold=16)
     run(film, skills, dog, "approach", "arm_pick_up")
     g = run(film, skills, dog, "grip", "arm_pick_up")
     film.say("arm_pick_up", f"failed at grip: the jaws closed on nothing (holding: {g['grasp']['holding']})", "bad",
@@ -167,6 +178,7 @@ def correct():
     film.show(seen["top"], "arm_look", "the agent reads the grid: block at +30, -10 mm from the red aim", "warn",
               hold=40)
     preview = eye.look((30, -10))
+    eye.r.close()
     film.show(preview["top"], "arm_look dx_mm=30 dy_mm=-10", "preview: the aim now sits on the block", "ok", hold=28)
     film.say("arm_pick_up dx_mm=30 dy_mm=-10", "corrections are limited to 40 mm per axis, in code", "ok", hold=8)
     skills.approach((30.0, -10.0))
@@ -191,17 +203,26 @@ def stall():
     return film.save("stall.gif")
 
 
-if __name__ == "__main__":
-    OUT.mkdir(exist_ok=True)
-    pick()
-    heal()
-    stall()
-    correct()
+def still():
     arm, skills, _ = bench()
     skills.go_home()
-    Film(arm).snap()
     f = Film(arm)
     f.say("so101-arm: the MuJoCo SO-101, ready", "", hold=1)
     f.frames[-1].save(OUT / "still.png")
+    f.r.close()
     print(OUT / "still.png")
-    _ = np  # numpy is imported by the sim; kept for clarity when editing
+
+
+MEDIA = {"pick": pick, "heal": heal, "stall": stall, "correct": correct, "still": still}
+
+if __name__ == "__main__":
+    OUT.mkdir(exist_ok=True)
+    names = sys.argv[1:]
+    if names:
+        for name in names:
+            MEDIA[name]()
+    else:
+        # One process per file: an OpenGL context that one film's renderer leaves behind can be torn
+        # down in the middle of the next film's frames, which turns them to noise.
+        for name in MEDIA:
+            subprocess.run([sys.executable, __file__, name], check=True)

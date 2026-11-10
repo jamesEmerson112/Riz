@@ -4,9 +4,10 @@ manifest_version: 2
 api_version: 1
 description: >-
   Give Hermes a robot arm, safely: SO-101 skills (go home, reach, approach, grip, lift, release,
-  pick up, play a taught motion, park) served by a local arm host that runs a MuJoCo sim or a real
-  arm through LeRobot. A plain-code watchdog parks the arm on faults, a pre_tool_call guard blocks
-  motion until a repair is verified, and only a person can unfreeze the arm.
+  pick up, play a taught motion, park) and a top-down camera with a 10 mm grid, served by a local
+  arm host that runs a MuJoCo sim or a real arm through LeRobot. A plain-code watchdog parks the arm
+  on faults, the host and a pre_tool_call guard refuse motion until a repair is verified, and no tool
+  can unfreeze the arm: a person does, with /arm unfreeze.
 author: jamesEmerson112
 license: MIT
 homepage: https://github.com/jamesEmerson112/hermes-so101-arm

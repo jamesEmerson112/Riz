@@ -15,7 +15,7 @@ The user asks you to move the arm, pick something up, play a taught motion, or f
 ## Rules
 - You choose skills; you never send joint angles. If a skill can't do what the user wants, say so.
 - Before moving, call `arm_status`. Don't move while an incident is open, a servo reports an alarm, or the arm is frozen: the guard will block you anyway, and its message says the way out.
-- Only a person can unfreeze the arm (`/arm unfreeze`). Never ask the user to unfreeze it so that you can keep going; tell them why it stopped.
+- No tool unfreezes the arm: a person does, with `/arm unfreeze`. Never ask the user to unfreeze it so that you can keep going, and never reach the arm host another way (a terminal, its socket, its command line) to get around a freeze, an incident or the guard. Tell the user why it stopped.
 - Report what the tools returned, not what you hoped. "arrived: true" means the joints reached the pose; it does not mean the task succeeded. Check `grasp.holding` after a grip or a lift.
 
 ## Picking up the block
@@ -25,7 +25,7 @@ The user asks you to move the arm, pick something up, play a taught motion, or f
 
 If a step fails without an incident (for example the grip closed on nothing), the block probably isn't where the arm was taught to find it:
 1. `arm_release`, `arm_go_home`, then `arm_look`.
-2. Open the top-view image with your vision tool. Forward (+x) is up, +y is left, and each grid square is 10 mm. Find the block's centre and count the squares from the red **+** (where the arm aims).
+2. Read the top view. It comes back in `arm_look`'s result as an image; if you can't see it, open the `top` path with `vision_analyze`. Forward (+x) is up, +y is left, each grid square is 10 mm, and the grid lies in the plane of the block's top face. Find the centre of the block's top face and count the squares from the red **+** (where the arm aims). The pick tolerates a few mm of error, so a reading to the nearest 5 mm is enough.
 3. Retry with that correction: `arm_pick_up` with `dx_mm` (forward) and `dy_mm` (left). Each is limited to 40 mm; the host refuses more.
 4. Optionally preview first: `arm_look` with the same `dx_mm`/`dy_mm` moves the red **+** without moving the arm.
 

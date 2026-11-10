@@ -7,14 +7,16 @@ sends joint angles, and no model sits in the real-time loop.
 
 Safety lives outside the model, in two places:
   - the arm host's watchdog (plain code) parks the arm on a fault (a frozen or wrong distance reading, a
-    joint that stalls, a servo alarm) and refuses motion until a repair is verified;
-  - this plugin's pre_tool_call hook blocks every motion tool while an incident is open, a servo reports
-    an alarm, or the operator has frozen the arm, and tells the agent the way out.
-Only a person can unfreeze the arm (`/arm unfreeze`); there is no tool for it.
+    joint that stalls, a servo alarm), and the host refuses motion until a repair is verified, or while
+    a person has frozen the arm;
+  - this plugin's pre_tool_call hook blocks every motion tool in those same states, and on a servo
+    alarm, before the call reaches the host, and tells the agent the way out.
+No tool in this plugin can unfreeze the arm: a person does that with `/arm unfreeze`. (Other tools, a
+terminal for one, can still reach the host's socket like any program you run; see the README.)
 
 What it touches: one Unix socket on this machine ($SO101_SOCK or the plugin's `socket` setting, else
-<temp dir>/so101-arm.sock). No network, no shell commands, no files, no background processes, no
-credentials.
+<temp dir>/so101-arm.sock). No network, no shell commands, no file reads or writes, no background
+processes, no credentials.
 """
 import json
 import os
@@ -141,11 +143,23 @@ def pick_up(args=None, **kwargs):
 
 
 def look(args=None, **kwargs):
-    """Render the sim's cameras to image files the agent can open with its vision tool."""
+    """Render the sim's cameras. The top view comes back inside the tool result (Hermes's multimodal
+    envelope), so a vision model reads the grid itself; Hermes sends the text summary instead to a model
+    or provider that can't take images in tool results, and that summary points at vision_analyze."""
     off = _offset(args)
     if off == "bad":
         return _json({"ok": False, "error": "dx_mm and dy_mm must be numbers"})
-    return _json(_call("look", aim_mm=off or [0.0, 0.0]))
+    reply = _call("look", aim_mm=off or [0.0, 0.0], inline=True)
+    png = reply.pop("top_png_b64", None)
+    text = _json(reply)
+    if not (reply.get("ok") and png):
+        return text
+    return {"_multimodal": True,
+            "content": [{"type": "text", "text": text + "\n\nThe top view is attached: read the grid with your "
+                                                         "own vision."},
+                        {"type": "image_url", "image_url": {"url": "data:image/png;base64," + png}}],
+            "text_summary": text + "\n\nOpen the 'top' image with vision_analyze to read the grid.",
+            "meta": {"image_path": reply.get("top"), "native_vision": True}}
 
 
 def status(args=None, **kwargs):
@@ -184,8 +198,9 @@ def guard(tool_name, args=None, task_id="", **kwargs):
     if not st.get("ok"):
         return None                                   # the tool itself reports the host problem
     if st.get("frozen"):
-        return {"action": "block", "message": f"The arm is frozen by the operator ({st['frozen']}). Only a person "
-                                              "can unfreeze it (/arm unfreeze). Tell the user and wait."}
+        return {"action": "block", "message": f"The arm is frozen by the operator ({st['frozen']}). No tool can "
+                                              "unfreeze it: a person does, with /arm unfreeze. Tell the user and "
+                                              "wait."}
     incidents = st.get("incidents") or []
     if incidents:
         said = "; ".join(f"{i['id']} {i['kind']}: {i['summary']}" for i in incidents)
@@ -251,12 +266,13 @@ def register(ctx):
                                       "dx_mm/dy_mm correct the aim (read them off arm_look's grid).", OFFSET))
     ctx.register_tool(
         name="arm_look", toolset=TOOLSET, handler=look,
-        schema=_schema("arm_look", "Look at the work area (sim): saves a top-down table map with a 10 mm grid, "
-                                   "the block, a red + where the arm will aim and a blue x where the jaws are, "
-                                   "plus a side view. Returns the image paths: open them with your vision tool, "
-                                   "read the block's offset from the aim in grid squares, and pass it as "
-                                   "dx_mm/dy_mm to arm_approach or arm_pick_up. Pass dx_mm/dy_mm here to "
-                                   "preview an aim before moving.", OFFSET))
+        schema=_schema("arm_look", "Look at the work area (sim): a top-down table map with a 10 mm grid, the "
+                                   "block, a red + where the arm will aim and a blue x where the jaws are, plus "
+                                   "a side view. The top view comes back in the result as an image (if you "
+                                   "can't see it, open the 'top' path with vision_analyze). Read the block "
+                                   "centre's offset from the red + in grid squares and pass it as dx_mm/dy_mm "
+                                   "to arm_approach or arm_pick_up. Pass dx_mm/dy_mm here to preview an aim "
+                                   "without moving.", OFFSET))
     ctx.register_tool(
         name="arm_status", toolset=TOOLSET, handler=status,
         schema=_schema("arm_status", "Read the arm: open incidents (and whether a person has one), servo alarm "

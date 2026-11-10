@@ -18,6 +18,7 @@ won't move after a checked retry is handed to a person; only an explicit `repair
 person's fix) closes it. The model chooses skills; it never sends joint angles.
 """
 import argparse
+import base64
 import json
 import math
 import os
@@ -477,7 +478,10 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
                 if state.get("eye") is None:
                     from .camera import Eye
                     state["eye"] = Eye(arm, data_dir() / "frames")
-                return {"ok": True, **state["eye"].look(aim)}
+                seen = state["eye"].look(aim)
+                if req.get("inline"):                 # the top view's bytes, for a tool result the model sees
+                    seen["top_png_b64"] = base64.b64encode(Path(seen["top"]).read_bytes()).decode()
+                return {"ok": True, **seen}
             except Exception as exc:                  # no OpenGL here: the arm still works, only the camera doesn't
                 return {"ok": False, "error": f"the sim camera can't render here ({type(exc).__name__}: {exc}). "
                                               "On headless Linux set MUJOCO_GL=egl (or osmesa) before starting "

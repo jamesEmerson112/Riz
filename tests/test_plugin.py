@@ -76,8 +76,11 @@ class FakeHost:
         if op == "motions":
             return {"ok": True, "motions": ["wave"]}
         if op == "look":
-            return {"ok": True, "top": "/tmp/look-001-top.png", "side": "/tmp/look-001-side.png",
-                    "aim_mm": req["aim_mm"], "grid_mm": 10}
+            reply = {"ok": True, "top": "/tmp/look-001-top.png", "side": "/tmp/look-001-side.png",
+                     "aim_mm": req["aim_mm"], "grid_mm": 10}
+            if req.get("inline") and st.get("inline_png", True):
+                reply["top_png_b64"] = "iVBORw0KGgo="
+            return reply
         if op == "repair":
             return {"ok": True, "action": req["action"], "verified": True}
         if op == "handoff":
@@ -150,9 +153,22 @@ def test_offsets_reach_the_host_and_bad_ones_are_refused(plugin):
     assert not run(ctx, "arm_approach", {"dx_mm": "north"})["ok"]
     out = run(ctx, "arm_pick_up", {"dx_mm": 20})
     assert out["picked_up"] and host.log[-3]["offset_mm"] == [20.0, 0.0]
-    look = run(ctx, "arm_look", {"dx_mm": 5})
-    assert look["top"].endswith("top.png") and host.log[-1]["aim_mm"] == [5.0, 0.0]
     assert ctx.hooks["pre_tool_call"]("arm_look", {}, task_id="t1") is None    # looking never moves the arm
+
+
+def test_look_hands_the_model_the_top_view(plugin):
+    """Hermes's multimodal envelope: the image for a vision model, a text summary for any other."""
+    mod, ctx, host = plugin
+    out = ctx.tools["arm_look"][2]({"dx_mm": 5}, task_id="t1")
+    assert host.log[-1] == {"op": "look", "aim_mm": [5.0, 0.0], "inline": True}
+    assert out["_multimodal"] is True and isinstance(out["content"], list)
+    text, image = out["content"]
+    assert text["type"] == "text" and json.loads(text["text"].split("\n\n")[0])["top"].endswith("top.png")
+    assert image["image_url"]["url"].startswith("data:image/png;base64,")
+    assert "top_png_b64" not in text["text"] and "vision_analyze" in out["text_summary"]
+    host.state["inline_png"] = False                       # an older host: the paths, as plain JSON
+    plain = json.loads(ctx.tools["arm_look"][2]({}, task_id="t1"))
+    assert plain["ok"] and plain["side"].endswith("side.png")
 
 
 def test_pick_up_stops_at_the_first_failed_step(plugin):
