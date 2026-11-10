@@ -10,7 +10,7 @@ description: >-
   can unfreeze the arm: a person does, with /arm unfreeze.
 author: jamesEmerson112
 license: MIT
-homepage: https://github.com/jamesEmerson112/hermes-so101-arm
+homepage: https://github.com/jamesEmerson112/Riz
 tags: [robotics, robot-arm, so-101, lerobot, mujoco, hardware, safety]
 requires_hermes: ">=0.21.6"
 provides_tools:

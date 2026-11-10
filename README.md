@@ -46,8 +46,8 @@ You need Python 3.12, [uv](https://docs.astral.sh/uv/), git, and Hermes Agent 0.
 
 1. Get the arm host and the SO-101 model:
    ```sh
-   git clone https://github.com/jamesEmerson112/hermes-so101-arm
-   cd hermes-so101-arm
+   git clone https://github.com/jamesEmerson112/Riz
+   cd Riz
    uv venv --python 3.12 .venv
    uv pip install --python .venv/bin/python -e './host[sim]'
    .venv/bin/python -m so101_host fetch-model
@@ -58,7 +58,7 @@ You need Python 3.12, [uv](https://docs.astral.sh/uv/), git, and Hermes Agent 0.
    ```
 3. Install the plugin and turn it on:
    ```sh
-   hermes plugins install jamesEmerson112/hermes-so101-arm
+   hermes plugins install jamesEmerson112/Riz
    hermes plugins enable so101-arm
    ```
 4. Ask for something:
@@ -208,7 +208,7 @@ On headless Linux the host renders the camera through EGL (`apt-get install libe
 
 ## Where it came from
 
-This plugin began at the Naïve Autonomous Company Hackathon at YC in San Francisco (Nov 7–8, 2026). There, an earlier version ran a real SO-101 through a job from a single order: 107 s, 25 tool calls, nobody typing. This repo is a rewrite for the Hermes Agent Plugin Hackathon. It adds a new LeRobot driver, the camera and aim correction, and a self-contained sim.
+This plugin began at the Naïve Autonomous Company Hackathon at YC in San Francisco (Nov 7–8, 2026). This repo is a rewrite for the Hermes Agent Plugin Hackathon. It adds a new LeRobot driver, the camera and aim correction, and a self-contained sim.
 
 ## License
 
