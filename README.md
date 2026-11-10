@@ -126,9 +126,10 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   - Picks aimed with its readings held the block 4 times out of 4. The same picks without the correction missed 4 out of 4.
   - Your model may read less precisely.
 - **The aim has some slack.** With the block moved (30, −10) mm, the pick still held with an aim off by up to ±12 mm forward or back. Sideways it held from 12 mm off one way to 4 mm off the other.
-- **26 tests:**
+- **29 tests:**
   - the plugin against a fake arm host: registration matches the manifest, every tool, the guard, `/arm`, and no host at all;
   - the arm host on the sim: the pick, a frozen sensor healed, a dead elbow handed to a person, the freeze, look-and-correct, and bounded offsets;
+  - the real plugin against the real sim host, calling the guard and then the tool as Hermes does: look-and-correct, a frozen sensor blocked and then healed, and the freeze;
   - the real-arm driver against a mock robot.
 
 ## A real SO-101 (not yet run on hardware)
@@ -184,7 +185,7 @@ Hermes ──tool calls──▶ so101-arm plugin (__init__.py, standard library
 | `plugin.yaml`, `__init__.py` | The Hermes plugin: 14 tools, the guard, `/arm` |
 | `skills/operate/SKILL.md` | How to run the arm, look and correct, and heal |
 | `host/so101_host/` | The arm host: skills, watchdog, sim, camera, real-arm driver, CLI |
-| `tests/`, `host/tests/` | The plugin against a fake host; the host on the sim and on a mock robot |
+| `tests/`, `host/tests/` | The plugin against a fake host; the host, and the plugin with it, on the sim; the real-arm driver on a mock robot |
 | `tools/make_media.py` | Re-records the GIFs above from the sim |
 
 ## Development
