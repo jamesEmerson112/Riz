@@ -5,11 +5,11 @@ A [Hermes Agent](https://github.com/NousResearch/hermes-agent) plugin that lets 
 - look at the table through a camera with a 10 mm grid, and correct its own aim;
 - heal the arm when a sensor or a joint fails.
 
-It runs on your laptop against a MuJoCo twin of the arm. The same arm host drives a real SO-101 through [LeRobot](https://github.com/huggingface/lerobot).
+It runs on your laptop against a MuJoCo twin of the arm. The same arm host has a driver for a real SO-101 through [LeRobot](https://github.com/huggingface/lerobot), which hasn't been run on hardware yet.
 
-![Sim: the block gets bumped and the pick closes on nothing. Hermes calls arm_look, reads the block's offset off the grid (+30, -10 mm), previews the new aim, and picks the block up.](media/correct.gif)
+![Sim: the block gets bumped and the pick closes on nothing; arm_look shows the block's offset on the grid (+30, -10 mm); a preview puts the aim on the block; the corrected pick holds it.](media/correct.gif)
 
-*Someone bumps the block 30 mm, so the pick closes on nothing. The agent calls `arm_look`, reads the offset off the grid, previews the new aim, and picks the block up. Recorded in the sim, step by step, with the same skills the tools call.*
+*Scripted in the sim with the same skills the tools call. Someone bumps the block 30 mm and the pick closes on nothing. `arm_look` shows the offset on the grid, a preview checks the new aim, and the corrected pick holds. [Measured in the sim](#measured-in-the-sim) shows a vision model reading these maps blind.*
 
 The model never sends joint angles and never sits in the control loop:
 - it chooses named skills;
@@ -37,6 +37,8 @@ The model never sends joint angles and never sits in the control loop:
 | A frozen wrist sensor: parked, restarted, verified, resumed | A dead elbow servo: checked once more, then handed to a person |
 |---|---|
 | ![Sim: the wrist distance sensor freezes at 130 mm during the approach; the watchdog parks the arm, the guard blocks motion, the agent restarts the sensor, the fix is verified at home, and the pick finishes holding the block.](media/heal.gif) | ![Sim: the elbow servo dies during a reach; the watchdog parks the arm, arm_check retries the move home, it still fails, and the incident is handed to a person while the arm stays parked.](media/stall.gif) |
+
+*Both scripted in the sim like the one above; the host's tests check each of these paths ([`host/tests/`](host/tests/)).*
 
 ## Quick start (the sim)
 
