@@ -1,6 +1,6 @@
 """Record the README's GIFs from the sim (MuJoCo offscreen; on Linux set MUJOCO_GL=egl).
 
-    python tools/make_media.py          # writes media/correct.gif, pick.gif, heal.gif, stall.gif and still.png
+    python tools/make_media.py          # writes media/correct.gif, pick.gif, heal.gif, stall.gif and card.png
     python tools/make_media.py heal     # just one
 
 Each GIF drives the same Skills and Watchdog the arm host uses, step by step, and captions every frame
@@ -35,6 +35,15 @@ def font(size):
 
 
 F_SMALL = font(15)
+
+
+def font_named(names, size):
+    for name in names:
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            continue
+    return font(size)
 
 
 def fit(text, size, room=W - 24):
@@ -203,17 +212,38 @@ def stall():
     return film.save("stall.gif")
 
 
-def still():
-    arm, skills, _ = bench()
-    skills.go_home()
-    f = Film(arm)
-    f.say("so101-arm: the MuJoCo SO-101, ready", "", hold=1)
-    f.frames[-1].save(OUT / "still.png")
-    f.r.close()
-    print(OUT / "still.png")
+def card():
+    """The catalog card (2:1, 1200x600): the arm holding the block, and what the plugin is."""
+    arm, skills, dog = bench()
+    for name in ("go_home", "approach", "grip", "lift"):
+        getattr(skills, name)()
+    arm.m.vis.global_.offwidth, arm.m.vis.global_.offheight = 1200, 600
+    r = mujoco.Renderer(arm.m, 600, 640)
+    cam = mujoco.MjvCamera()
+    cam.lookat[:] = [0.15, 0.0, 0.10]
+    cam.distance, cam.azimuth, cam.elevation = 0.50, 215.0, -18.0
+    r.update_scene(arm.d, cam)
+    shot = Image.fromarray(r.render()).convert("RGB")
+    r.close()
+    img = Image.new("RGB", (1200, 600), (12, 16, 24))
+    img.paste(shot, (0, 0))
+    d = ImageDraw.Draw(img)
+    bold = font_named(("DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                       "Arial Bold.ttf"), 60)
+    d.text((680, 70), "so101-arm", font=bold, fill=(245, 248, 255))
+    d.text((682, 150), "Give Hermes a robot arm, safely", font=font(30), fill=(150, 200, 255))
+    lines = ("Skills, never joint angles", "A grid camera to correct its aim", "A watchdog that parks it on faults",
+             "Heals, verifies, or calls a person", "A kill switch only a person lifts")
+    for i, line in enumerate(lines):
+        y = 232 + i * 52
+        d.ellipse([684, y + 9, 696, y + 21], fill=(130, 230, 160))
+        d.text((712, y), line, font=font(26), fill=(225, 230, 240))
+    d.text((682, 520), "MuJoCo sim on a laptop · real SO-101 via LeRobot", font=fit("MuJoCo sim on a laptop · real SO-101 via LeRobot", 19, 500), fill=(140, 150, 170))
+    img.save(OUT / "card.png")
+    print(OUT / "card.png")
 
 
-MEDIA = {"pick": pick, "heal": heal, "stall": stall, "correct": correct, "still": still}
+MEDIA = {"pick": pick, "heal": heal, "stall": stall, "correct": correct, "card": card}
 
 if __name__ == "__main__":
     OUT.mkdir(exist_ok=True)
