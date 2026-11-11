@@ -361,7 +361,13 @@ class Watchdog:
 
 def _brief(inc):
     keys = ("id", "kind", "severity", "summary", "at", "handed_off", "handoff_reason", "next_steps")
-    return {k: inc[k] for k in keys if inc.get(k) is not None}
+    out = {k: inc[k] for k in keys if inc.get(k) is not None}
+    steps = list(out.get("next_steps") or [])
+    if inc.get("kind") in SENSOR_KINDS and not inc.get("handed_off") and not any("arm_restart_sensor" in s for s in steps):
+        # the agent's first move for any sensor fault, before the steps meant for a person
+        out["next_steps"] = ["first restart the sensor (arm_restart_sensor); the watchdog re-checks it at home"] + [
+            f"if it comes back: {s}" for s in steps]
+    return out
 
 
 def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):

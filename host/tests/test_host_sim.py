@@ -119,6 +119,14 @@ def test_the_agent_corrects_its_aim_from_the_grid_when_the_block_moved(host):
     host("clear")
 
 
+def test_every_sensor_incident_says_restart_first():
+    from so101_host.host import _brief
+    inc = {"id": "inc-1", "kind": "us_missing_echo", "summary": "no echo", "next_steps": ["a person checks the wires"]}
+    steps = _brief(inc)["next_steps"]
+    assert "arm_restart_sensor" in steps[0] and steps[1] == "if it comes back: a person checks the wires"
+    assert _brief({**inc, "kind": "joint_stall"})["next_steps"] == ["a person checks the wires"]
+
+
 def test_a_block_beyond_the_limit_is_seen_but_not_offered(host):
     host("clear")
     host("skill", name="go_home")
