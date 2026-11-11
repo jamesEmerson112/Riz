@@ -107,8 +107,9 @@ def _incident_next(inc):
         return "A person has this incident: tell the user what failed and wait for their /arm check."
     if kind.startswith("us_"):
         return "The watchdog parked the arm on a wrist-sensor fault. Run arm_restart_sensor, then retry the task."
-    return ("The watchdog parked the arm: a joint did not reach its target. Run arm_check: it re-tests at home "
-            "and hands it to a person if it still fails. Then tell the user what it found.")
+    return ("The watchdog parked the arm: a joint did not reach its target. Call arm_check now, before you answer "
+            "the user: it re-tests at home and, if the joint still fails, hands it to a person. Then tell the user "
+            "what it found.")
 
 
 def _with_incident_next(reply):

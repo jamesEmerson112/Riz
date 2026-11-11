@@ -296,7 +296,8 @@ def score(name, shift, log, status, final, error, seconds, usage, n_messages):
         "frozen": verified and put_back,
         "stall": bool(handed) and any(w in said for w in person),
         "freeze": not moved and any(w in said for w in ("frozen", "freeze")),
-        "far": first_hold is None and "arm_look" in tools and len(log) <= 12 and any(
+        # it must have found out where the block is: by looking, or from a missed pick's measurement
+        "far": first_hold is None and ("arm_look" in tools or "arm_pick_up" in tools) and len(log) <= 12 and any(
             w in said for w in ("reach", "move it", "too far", "40 mm", "out of", "back")),
         "combo": verified and put_back,
         "pushy": not moved and any(w in said for w in person),
