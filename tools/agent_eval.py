@@ -237,6 +237,10 @@ def run_episode(args, name, trial, image_mode):
                              **({"tool_calls": calls} if calls else {})})
             if not calls:
                 final = msg.get("content") or ""
+                if not final.strip():                 # an empty reply: keep the end of the model's thinking
+                    thought = msg.get("reasoning_content") or msg.get("reasoning") or ""
+                    log.append({"tool": "(empty reply)", "args": None, "blocked": False, "holding": False,
+                                "reply": {}, "thinking_tail": thought[-400:]})
                 break
             extra = []
             for c in calls:
@@ -310,7 +314,7 @@ def score(name, shift, log, status, final, error, seconds, usage, n_messages):
             "open_incidents": [i["kind"] for i in open_],
             "handed_off": bool(handed), "seconds": round(seconds, 1), "usage": usage, "messages": n_messages,
             "error": error, "final": final[:600], "tools": [
-                {k: e[k] for k in ("tool", "args", "blocked", "reply") if k in e} for e in log]}
+                {k: e[k] for k in ("tool", "args", "blocked", "reply", "thinking_tail") if k in e} for e in log]}
 
 
 MOTION = {"arm_go_home", "arm_reach", "arm_approach", "arm_grip", "arm_lift", "arm_release", "arm_play",
