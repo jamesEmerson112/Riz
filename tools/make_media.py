@@ -26,7 +26,7 @@ from so101_host.record import RunRecorder  # noqa: E402
 
 W, H = 560, 350
 OUT = ROOT / "media"
-PIXEL = 5                   # the films' look: 5 px blocks in four greys (the bench itself is black and white)
+PIXEL = 5                   # the films' look: 5 px blocks in four greys
 
 
 def pixelate(img):
