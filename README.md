@@ -167,7 +167,7 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   - Setup: a frontier vision model got only four top views from before the plain-code measurement, each with the block moved by an amount it wasn't told. It ran no code.
   - It read all four offsets to the millimetre: (22, 14), (−18, −27), (33, 6) and (−8, 31) mm. The picks aimed with its readings held 4 out of 4, and without the correction they missed 4 out of 4.
 - **The aim has some slack.** With the block moved (30, −10) mm, the pick still held with an aim off by up to ±12 mm forward or back. Sideways it held from 12 mm off one way to 4 mm off the other.
-- **35 tests:**
+- **36 tests:**
   - the plugin against a fake arm host: registration matches the manifest, every tool, the guard, `/arm`, and no host at all;
   - the arm host on the sim: the pick, a frozen sensor healed, a dead elbow handed to a person, the freeze, look-and-correct, and bounded offsets;
   - the real plugin against the real sim host, calling the guard and then the tool as Hermes does: look-and-correct, a frozen sensor blocked and then healed, and the freeze;
