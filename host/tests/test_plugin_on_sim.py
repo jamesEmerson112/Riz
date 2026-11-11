@@ -106,6 +106,15 @@ def test_look_and_correct_through_the_plugin(agent):
     host("clear")
 
 
+def test_a_refused_aim_says_why_instead_of_blaming_a_fault(agent):
+    use, host, _ = agent
+    host("clear")
+    use("arm_go_home")
+    out = use("arm_pick_up", {"dx_mm": 55, "dy_mm": 0})
+    assert not out["picked_up"] and out["failed_at"] == "approach"
+    assert "refused" in out["hint"] and "40 mm" in out["hint"] and "fault" not in out["hint"]
+
+
 def test_a_frozen_sensor_is_blocked_then_healed_through_the_plugin(agent):
     use, host, _ = agent
     host("clear")

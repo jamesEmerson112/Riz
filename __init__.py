@@ -136,10 +136,14 @@ def pick_up(args=None, **kwargs):
         result = reply.get("result") or {}
         steps.append({"step": name, "ok": bool(reply.get("ok") and ok(result)), "reply": reply})
         if not steps[-1]["ok"]:
-            hint = ("The arm is parked by a fault: check arm_status and repair first." if name == "approach" else
-                    "The jaws closed on nothing, so the block isn't where the arm aimed. Do arm_release, then "
-                    "arm_look: it measures where the block is and gives the exact arm_pick_up dx_mm/dy_mm in "
-                    "its to_pick_it field. Retry with those numbers.")
+            if reply.get("error"):                      # the host refused the call itself
+                hint = f"The arm host refused it: {reply['error']}. Don't retry the same call."
+            elif name == "approach":
+                hint = "The arm is parked by a fault: check arm_status and repair first."
+            else:
+                hint = ("The jaws closed on nothing, so the block isn't where the arm aimed. Do arm_release, then "
+                        "arm_look: it measures where the block is and gives the exact arm_pick_up dx_mm/dy_mm in "
+                        "its to_pick_it field. Retry with those numbers.")
             return _json({"ok": False, "picked_up": False, "failed_at": name, "steps": steps, "hint": hint})
     return _json({"ok": True, "picked_up": True, "steps": steps})
 
@@ -288,7 +292,9 @@ def register(ctx):
                                    "x where the jaws are. The result has the map as an image, and block_mm: where "
                                    "plain code measured the block's centre on that grid. To pick the block up, "
                                    "call arm_pick_up with the to_pick_it numbers (dx_mm, dy_mm); check them "
-                                   "against the image first. If you can't see the image, open the 'top' path "
+                                   "against the image first. If it says reachable: false, the block is past the "
+                                   "40 mm the arm may correct: don't try, tell the user to move it back near "
+                                   "the marked spot. If you can't see the image, open the 'top' path "
                                    "with vision_analyze. Pass dx_mm/dy_mm here to preview an aim without "
                                    "moving.", OFFSET))
     ctx.register_tool(

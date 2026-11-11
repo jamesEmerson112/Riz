@@ -479,6 +479,16 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
                     from .camera import Eye
                     state["eye"] = Eye(arm, data_dir() / "frames")
                 seen = state["eye"].look(aim)
+                far = seen.get("block_mm") and max(abs(v) for v in seen["block_mm"]) > MAX_OFFSET_MM
+                if far:                               # the camera sees it, but no correction may reach it
+                    seen["to_pick_it"] = ("none: the block is out of reach. Don't pick; tell the user to move it "
+                                          "back near the marked spot (0, 0 on the map).")
+                    seen["reachable"] = False
+                    seen["note"] = (f"The block is more than {MAX_OFFSET_MM:g} mm from the taught spot, beyond what "
+                                    "the arm may correct (a limit in code). Don't try to pick it: tell the user "
+                                    "it needs to go back near the marked spot (0, 0 on the map).")
+                elif seen.get("block_mm"):
+                    seen["reachable"] = True
                 if req.get("inline"):                 # the top view's bytes, for a tool result the model sees
                     seen["top_png_b64"] = base64.b64encode(Path(seen["top"]).read_bytes()).decode()
                 return {"ok": True, **seen}

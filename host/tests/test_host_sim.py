@@ -119,6 +119,16 @@ def test_the_agent_corrects_its_aim_from_the_grid_when_the_block_moved(host):
     host("clear")
 
 
+def test_a_block_beyond_the_limit_is_seen_but_not_offered(host):
+    host("clear")
+    host("skill", name="go_home")
+    host("inject", fault="block_shift", params={"dx_mm": 55, "dy_mm": 0})
+    seen = host("look")
+    assert seen["block_mm"] == [55, 0] and seen["reachable"] is False and seen["to_pick_it"].startswith("none")
+    assert "tell the user" in seen["note"]
+    host("clear")
+
+
 def test_offsets_are_bounded_in_code(host):
     host("clear")
     for bad in ([41, 0], [0, -60], ["x", 1], [float("inf"), 0]):
