@@ -172,7 +172,7 @@ def test_look_hands_the_model_the_top_view(plugin):
     text, image = out["content"]
     assert text["type"] == "text" and json.loads(text["text"].split("\n\n")[0])["top"].endswith("top.png")
     assert image["image_url"]["url"].startswith("data:image/png;base64,")
-    assert "top_png_b64" not in text["text"] and "vision_analyze" in out["text_summary"]
+    assert "top_png_b64" not in text["text"] and "to_pick_it" in out["text_summary"]
     host.state["inline_png"] = False                       # an older host: the paths, as plain JSON
     plain = json.loads(ctx.tools["arm_look"][2]({}, task_id="t1"))
     assert plain["ok"] and plain["side"].endswith("side.png")

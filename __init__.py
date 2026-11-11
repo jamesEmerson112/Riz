@@ -141,11 +141,27 @@ def pick_up(args=None, **kwargs):
             elif name == "approach":
                 hint = "The arm is parked by a fault: check arm_status and repair first."
             else:
-                hint = ("The jaws closed on nothing, so the block isn't where the arm aimed. Do arm_release, then "
-                        "arm_look: it measures where the block is and gives the exact arm_pick_up dx_mm/dy_mm in "
-                        "its to_pick_it field. Retry with those numbers.")
+                hint, measured = _missed_block_hint()
+                if measured:
+                    steps.append({"step": "measure", "ok": True, "reply": measured})
             return _json({"ok": False, "picked_up": False, "failed_at": name, "steps": steps, "hint": hint})
     return _json({"ok": True, "picked_up": True, "steps": steps})
+
+
+def _missed_block_hint():
+    """After a grip that closed on nothing: measure where the block really is (the sim's camera, plain code)
+    and say exactly what to do next. Without a camera (the real arm), say how to find out."""
+    seen = _call("look", aim_mm=[0.0, 0.0], timeout=30.0)
+    if not seen.get("ok") or not seen.get("block_seen"):
+        return ("The jaws closed on nothing, so the block isn't where the arm aimed. Do arm_release, then arm_look "
+                "to see where it is."), None
+    bx, by = seen["block_mm"]
+    measured = {"block_mm": seen["block_mm"], "reachable": seen.get("reachable", True)}
+    if seen.get("reachable") is False:
+        return (f"The jaws closed on nothing: the block was moved to dx_mm={bx}, dy_mm={by}, past the 40 mm the arm "
+                "may correct. Do arm_release, then tell the user to move it back near the marked spot."), measured
+    return (f"The jaws closed on nothing: the block was moved. Plain code measured it at dx_mm={bx}, dy_mm={by}. "
+            f"Do arm_release, then arm_pick_up with dx_mm={bx} and dy_mm={by}."), measured
 
 
 def look(args=None, **kwargs):
@@ -164,7 +180,8 @@ def look(args=None, **kwargs):
             "content": [{"type": "text", "text": text + "\n\nThe top view is attached: read the grid with your "
                                                          "own vision."},
                         {"type": "image_url", "image_url": {"url": "data:image/png;base64," + png}}],
-            "text_summary": text + "\n\nOpen the 'top' image with vision_analyze to read the grid.",
+            "text_summary": text + "\n\nThe numbers above were measured for you: use to_pick_it. (The map "
+                                   "image is at the 'top' path, for vision_analyze if you want to look.)",
             "meta": {"image_path": reply.get("top"), "native_vision": True}}
 
 

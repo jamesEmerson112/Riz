@@ -91,7 +91,8 @@ def test_look_and_correct_through_the_plugin(agent):
     host("inject", fault="block_shift", params={"dx_mm": 30, "dy_mm": -10})
     missed = use("arm_pick_up")
     assert not missed["picked_up"] and missed["failed_at"] in ("grip", "lift"), missed
-    assert "arm_look" in missed["hint"] and "to_pick_it" in missed["hint"]
+    assert "dx_mm=30, dy_mm=-10" in missed["hint"]                       # measured on the spot, in plain code
+    assert missed["steps"][-1]["reply"]["block_mm"] == [30, -10]
     use("arm_release")
     use("arm_go_home")
     seen = use("arm_look")
