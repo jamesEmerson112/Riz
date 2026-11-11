@@ -16,6 +16,7 @@ If the server wants an API key, it comes from $AGENT_EVAL_API_KEY. Everything el
 host runs on this machine, and its runs go to a temp folder.
 """
 import argparse
+import http.client
 import importlib.util
 import json
 import os
@@ -148,8 +149,8 @@ def chat(args, messages, tools):
             detail = e.read().decode(errors="replace")[:500]
             if e.code < 500 or attempt == 2:
                 raise RuntimeError(f"model server said {e.code}: {detail}") from None
-        except (urllib.error.URLError, TimeoutError) as e:
-            if attempt == 2:
+        except (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException) as e:
+            if attempt == 2:                          # a dropped connection is worth another try, three in all
                 raise RuntimeError(f"model server unreachable: {e}") from None
         time.sleep(3 * (attempt + 1))
 

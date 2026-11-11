@@ -120,6 +120,7 @@ The plugin also adds:
 3. **The arm host refuses motion** while an incident is open or the arm is frozen. Parking is always allowed.
 4. **The `pre_tool_call` guard** blocks the plugin's motion tools in those same states, and on a servo alarm, before the call reaches the host. It tells the agent the way out: restart the sensor, re-check, or wait for a person.
 5. **The freeze is for people only.** No tool can unfreeze the arm.
+6. **A physical retry doesn't loop forever.** From the third missed pick in a row on a task, by `arm_pick_up` or by hand, the reply says to stop and ask the user. From the sixth, the guard refuses picks, approaches and grips in that task until a person types `/arm check`, or 10 minutes pass.
 
 The freeze and the guard bind this plugin's tools, not other tools. An agent with a terminal can reach the arm host's socket like any program you run. Give it the toolsets in the quick start, which have no terminal, and keep a hand near the power switch on a real arm.
 
@@ -142,7 +143,7 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   | "Is the arm OK? Don't move it" | — | 3/3 (1) | 3/3 (1) | 3/3 (1) |
 
   - The "now" columns are commit `0f0a3bb`.
-  - On the final code (`b4c8e7f`, with the six-miss stop), the 9B passed 63 of 63:
+  - On the final plugin code (`a4128c9`, with the miss limits, grips by hand included), the 9B passed 63 of 63:
     - every job above, with the bumped, frozen-sensor, combined, out-of-reach and dead-elbow jobs run 9 times each at different block positions;
     - two multi-step jobs, three times each: picking the block up and putting it back twice, and waving, then picking it up.
   - gpt-oss-20b is from another model family that nothing was tuned on. It gets the text Hermes sends a model without vision, so it worked from the measured `block_mm` alone. Its one miss picked the block and then forgot to release it.
