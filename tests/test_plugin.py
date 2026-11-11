@@ -178,6 +178,16 @@ def test_look_hands_the_model_the_top_view(plugin):
     assert plain["ok"] and plain["side"].endswith("side.png")
 
 
+def test_three_missed_picks_in_a_row_say_stop_and_ask(plugin):
+    mod, ctx, host = plugin
+    host.state["grasp_holding"] = False
+    hints = [json.loads(ctx.tools["arm_pick_up"][2]({}, task_id="t9"))["hint"] for _ in range(3)]
+    assert "stop retrying" not in hints[1] and "3 missed picks in a row: stop retrying" in hints[2]
+    assert "stop retrying" not in json.loads(ctx.tools["arm_pick_up"][2]({}, task_id="other"))["hint"]
+    host.state["grasp_holding"] = True
+    assert run(ctx, "arm_pick_up")["picked_up"]                        # a success resets the count
+
+
 def test_pick_up_stops_at_the_first_failed_step(plugin):
     mod, ctx, host = plugin
     assert run(ctx, "arm_pick_up")["picked_up"]
@@ -242,7 +252,7 @@ def test_no_host_is_an_error_reply_not_an_exception(tmp_path):
 def test_the_plugin_needs_only_the_standard_library():
     src = (ROOT / "__init__.py").read_text()
     imports = {line.split()[1].split(".")[0] for line in src.splitlines() if line.startswith(("import ", "from "))}
-    assert imports <= {"json", "os", "socket", "tempfile", "pathlib"}, imports
+    assert imports <= {"json", "os", "socket", "tempfile", "time", "pathlib"}, imports
     assert not any(p.suffix in (".pyc", ".pyo") for p in ROOT.rglob("*") if ".git" not in p.parts
                    and "vendor" not in p.parts and "__pycache__" not in p.parts)
 

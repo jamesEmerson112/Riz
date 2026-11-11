@@ -22,10 +22,13 @@ import json
 import os
 import socket
 import tempfile
+import time
 from pathlib import Path
 
 TOOLSET = "so101_arm"
-_STATE = {"socket": None}
+_STATE = {"socket": None, "misses": {}}
+MISS_LIMIT = 3          # failed picks in a row (per task) before the reply says to stop and ask the user
+MISS_FORGET_S = 600     # a miss older than this no longer counts
 
 SKILLS = {
     "arm_go_home": ("go_home", "Move the arm to its ready pose over the work area. Use it first, and to reset "
@@ -139,6 +142,16 @@ def play(args=None, **kwargs):
     return _json(_with_incident_next(_call("play", motion=motion, speed=speed)))
 
 
+def _count_miss(task_id, missed):
+    """Consecutive failed picks for this task: a physical retry shouldn't loop forever."""
+    now = time.monotonic()
+    misses = [t for t in _STATE["misses"].get(task_id, []) if now - t < MISS_FORGET_S] if missed else []
+    if missed:
+        misses.append(now)
+    _STATE["misses"][task_id] = misses
+    return len(misses)
+
+
 def pick_up(args=None, **kwargs):
     """approach -> grip -> lift, stopping at the first step that fails, so the agent sees exactly where
     a pick went wrong (and the watchdog has already parked the arm if it was a fault)."""
@@ -163,10 +176,16 @@ def pick_up(args=None, **kwargs):
             else:
                 hint, measured = _missed_block_hint()
             # the verdict and what to do first, the details after: small models read from the top
+            if name != "approach" or reply.get("error"):
+                n = _count_miss(kwargs.get("task_id") or "", True)
+                if n >= MISS_LIMIT:
+                    hint = (f"That is {n} missed picks in a row: stop retrying. Tell the user what happened and what "
+                            "arm_look shows, and let them check the block. " + hint)
             out = {"ok": False, "picked_up": False, "failed_at": name, "hint": hint}
             if measured:
                 out["measured"] = measured
             return _json({**out, "steps": steps})
+    _count_miss(kwargs.get("task_id") or "", False)
     return _json({"ok": True, "picked_up": True,
                   "next": "Holding the block about 30 mm up. To put it back, call arm_release: it sets the block "
                           "down where it was picked up.", "steps": steps})
