@@ -172,12 +172,27 @@ def status(args=None, **kwargs):
                   "motions": _call("motions").get("motions")})
 
 
+def _with_next(reply):
+    """Say what comes next after a repair or a hand-off, in words the agent can pass on to the user."""
+    if not reply.get("ok"):
+        return reply
+    if reply.get("handed_off"):
+        reply["next"] = ("This needs a person. Stop moving the arm, and tell the user what failed and that a person "
+                         "must fix it and then type /arm check. The arm stays parked until then.")
+    elif reply.get("verified"):
+        reply["next"] = "Fixed and checked at home. Carry on with the task."
+    elif reply.get("verified") is False:
+        reply["next"] = ("Not fixed. Read arm_status; if it still fails, hand it to a person with arm_handoff and "
+                         "tell the user what failed.")
+    return reply
+
+
 def restart_sensor(args=None, **kwargs):
-    return _json(_call("repair", action="restart_sensor"))
+    return _json(_with_next(_call("repair", action="restart_sensor")))
 
 
 def check(args=None, **kwargs):
-    return _json(_call("repair", action="verify"))
+    return _json(_with_next(_call("repair", action="verify")))
 
 
 def handoff(args=None, **kwargs):
@@ -189,7 +204,7 @@ def handoff(args=None, **kwargs):
     if not open_:
         return _json({"ok": False, "error": "no open incident to hand off"})
     reason = str(args.get("reason") or "the agent asked for a person").strip()[:300]
-    return _json(_call("handoff", id=open_[0]["id"], reason=reason))
+    return _json(_with_next(_call("handoff", id=open_[0]["id"], reason=reason)))
 
 
 def guard(tool_name, args=None, task_id="", **kwargs):

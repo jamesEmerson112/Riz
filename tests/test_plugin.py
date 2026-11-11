@@ -149,6 +149,7 @@ def test_every_tool_returns_json_and_reaches_the_host(plugin):
     st = run(ctx, "arm_status")
     assert st["motions"] == ["wave"] and st["distance"]["mm"] == 120
     assert run(ctx, "arm_restart_sensor")["verified"] and run(ctx, "arm_check")["verified"]
+    assert run(ctx, "arm_check")["next"].startswith("Fixed")             # what to do next, in words
 
 
 def test_offsets_reach_the_host_and_bad_ones_are_refused(plugin):
@@ -218,7 +219,7 @@ def test_handoff_needs_an_open_incident(plugin):
     assert not run(ctx, "arm_handoff", {"reason": "x"})["ok"]
     host.state["incidents"] = [{"id": "inc-3", "kind": "us_noisy", "summary": "jitters"}]
     out = run(ctx, "arm_handoff", {"reason": "sensor keeps jittering after two restarts"})
-    assert out["ok"] and out["id"] == "inc-3"
+    assert out["ok"] and out["id"] == "inc-3" and "/arm check" in out["next"]
 
 
 def test_slash_command_status_reads_like_a_sentence(plugin):
