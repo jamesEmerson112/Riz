@@ -128,8 +128,24 @@ def _skill_handler(skill):
                 return _json({"ok": False, "error": "dx_mm and dy_mm must be numbers"})
             if off is not None:
                 return _json(_with_incident_next(_call("skill", name=skill, offset_mm=off)))
-        return _json(_with_incident_next(_call("skill", name=skill)))
+        reply = _call("skill", name=skill)
+        if skill == "grip" and reply.get("ok") and not reply.get("incident"):
+            reply = _after_grip(reply, kwargs.get("task_id") or "")
+        return _json(_with_incident_next(reply))
     return handler
+
+
+def _after_grip(reply, task_id):
+    """A grip by hand counts like arm_pick_up: a miss is measured and counted, a hold resets the count."""
+    held = ((reply.get("result") or {}).get("grasp") or {}).get("holding")
+    n = _count_miss(task_id, not held)
+    if held:
+        return reply
+    hint, measured = _missed_block_hint()
+    if n >= MISS_LIMIT:
+        hint = (f"That is {n} missed picks in a row: stop retrying. Tell the user what happened and what arm_look "
+                "shows, and let them check the block. " + hint)
+    return {"next": hint, **({"measured": measured} if measured else {}), **reply}
 
 
 def play(args=None, **kwargs):

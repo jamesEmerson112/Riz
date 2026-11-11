@@ -203,6 +203,20 @@ def test_six_missed_picks_stop_picking_until_a_person_checks(plugin):
     assert guard("arm_pick_up", {}, task_id="t7") is None
 
 
+def test_grips_by_hand_count_toward_the_stop_too(plugin):
+    mod, ctx, host = plugin
+    guard = ctx.hooks["pre_tool_call"]
+    host.state["grasp_holding"] = False
+    for _ in range(6):
+        ctx.tools["arm_grip"][2]({}, task_id="t5")
+    assert "stop retrying" in json.loads(ctx.tools["arm_grip"][2]({}, task_id="t5"))["next"]
+    assert guard("arm_approach", {}, task_id="t5")["action"] == "block"
+    host.state["grasp_holding"] = True
+    ctx.commands["arm"]("check")
+    out = json.loads(ctx.tools["arm_grip"][2]({}, task_id="t5"))
+    assert "next" not in out and mod._recent_misses("t5") == []          # a hold resets the count
+
+
 def test_pick_up_stops_at_the_first_failed_step(plugin):
     mod, ctx, host = plugin
     assert run(ctx, "arm_pick_up")["picked_up"]
