@@ -100,9 +100,13 @@ class Host:
                    PYTHONPATH=os.pathsep.join(filter(None, [str(ROOT / "host"), os.environ.get("PYTHONPATH")])))
         self.proc = subprocess.Popen([sys.executable, "-m", "so101_host", "serve"], env=env,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for _ in range(400):
+        for _ in range(600):                 # the socket file appears at bind(); wait until it answers
             if self.sock.exists():
-                return self
+                try:
+                    if call("ping", sock=self.sock, timeout=5).get("ok"):
+                        return self
+                except OSError:
+                    pass
             time.sleep(0.05)
         self.proc.kill()
         raise RuntimeError("the arm host didn't start")

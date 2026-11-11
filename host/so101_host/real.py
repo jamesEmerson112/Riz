@@ -270,13 +270,14 @@ class RealArm:
     def grip_limit_nm(self):
         return STALL_NM
 
-    def grasp_check(self, *, min_open=4.0, min_load=0.25):
+    def grasp_check(self, *, min_open=4.0, max_open=55.0, min_load=0.25):
+        """As the sim's: short of closed, not open to release (60), and the servo pushing."""
         q = getattr(self, "_q", None)
         if q is None:
             self.tick()
             q = self._q
         load = self.load_nm("gripper")
-        return {"holding": float(q[5]) > min_open and load > min_load, "gripper": round(float(q[5]), 1),
+        return {"holding": min_open < float(q[5]) < max_open and load > min_load, "gripper": round(float(q[5]), 1),
                 "load_nm": round(load, 3)}
 
     # ---- sim-only features, refused politely --------------------------------------------------

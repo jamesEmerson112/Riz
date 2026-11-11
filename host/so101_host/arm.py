@@ -253,11 +253,13 @@ class SimArm:
         """The gripper servo's torque limit (N*m); the overload bit trips when held near it."""
         return float(self._flimit[5])
 
-    def grasp_check(self, *, min_open=4.0, min_load=0.25):
-        """Holding = the gripper stopped short of fully closed and its servo is pushing."""
+    def grasp_check(self, *, min_open=4.0, max_open=55.0, min_load=0.25):
+        """Holding = the gripper stopped short of fully closed, isn't open to release (60), and its servo is
+        pushing. (Right after a release the open gripper still shows some load while it settles.)"""
         g = float(self._units(self.d.qpos[self._qadr])[5])
         load = float(abs(self.d.actuator_force[self._act][5]))
-        return {"holding": g > min_open and load > min_load, "gripper": round(g, 1), "load_nm": round(load, 3)}
+        return {"holding": min_open < g < max_open and load > min_load, "gripper": round(g, 1),
+                "load_nm": round(load, 3)}
 
     # ---- the wrist ultrasonic (an HC-SR04-style rangefinder) -----------------------------------
     def distance(self):

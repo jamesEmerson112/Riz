@@ -119,6 +119,17 @@ def test_the_agent_corrects_its_aim_from_the_grid_when_the_block_moved(host):
     host("clear")
 
 
+def test_an_open_gripper_is_not_holding_right_after_a_release(host):
+    host("clear")
+    host("skill", name="go_home")
+    host("skill", name="approach")
+    host("skill", name="grip")
+    assert host("skill", name="lift")["result"]["grasp"]["holding"]
+    host("skill", name="release")
+    assert not host("status")["grasp"]["holding"]                      # it settles with load, but it's open
+    host("clear")
+
+
 def test_every_sensor_incident_says_restart_first():
     from so101_host.host import _brief
     inc = {"id": "inc-1", "kind": "us_missing_echo", "summary": "no echo", "next_steps": ["a person checks the wires"]}
