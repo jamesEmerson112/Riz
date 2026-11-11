@@ -11,6 +11,8 @@ It runs on your laptop against a MuJoCo twin of the arm. The same arm host has a
 
 *Scripted in the sim with the same skills the tools call. Someone bumps the block 30 mm and the pick closes on nothing. `arm_look` measures where the block is and shows it on the grid, a preview checks the new aim, and the corrected pick holds. [Measured in the sim](#measured-in-the-sim) shows a vision model reading these maps blind.*
 
+[Watch the 88-second demo](media/demo.mp4): a noisy miss, a rehearsal and a pick that holds, a frozen sensor healed, a dead elbow handed to a person, and a freeze that holds until `/arm unfreeze`. Each scene is a real Hermes run with gpt-6-astra, played about 1.2x faster than filmed, with the waits on the model cut out.
+
 The model never sends joint angles and never sits in the control loop:
 - it chooses named skills;
 - plain code checks every reading and parks the arm on a fault;
@@ -36,6 +38,10 @@ It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with
   - The agent then sends that aim to the main arm, which never moves during a rehearsal. A copy's pick takes about 0.15 s of CPU, so 16 copies take about 3 s on a laptop.
   - When the arm is noisy (in the sim, `joint_noise` and `camera_noise`), the copies get the same noise levels, never its actual draws, and each aim is tried several times. The result is a hit rate per aim, and the best aim is the most reliable one.
   - With `serve --view`, the copies run live in a grid behind the arm, one column per aim and one row per try; the ones that missed turn red and stay up until the next job.
+
+  ![Sim, in Hermes: the main arm in front and 15 rehearsal copies in a grid behind it, 5 aims by 3 tries; the 4 copies that missed are red. The log on the right reads "REHEARSED 5 aims x 3 on 15 sim copies: best (23, 16) held 3/3".](media/rehearse.png)
+
+  *A frame of the host's own video, with camera noise (4 mm), motor noise (1.5°) and the block at a random spot. Of the 15 copies, 4 missed; the best aim, (23, 16), held 3 of 3.*
 - **Heals.**
   - A watchdog in plain code checks every reading: a frozen or stuck distance sensor, a distance that disagrees with the arm's pose, a joint that stalls, a servo alarm.
   - On a fault it parks the arm and opens an incident.
@@ -70,6 +76,7 @@ You need Python 3.12, [uv](https://docs.astral.sh/uv/), git, and Hermes Agent 0.
    hermes plugins install jamesEmerson112/Riz
    hermes plugins enable so101-arm
    ```
+   Once the [catalog PR](https://github.com/NousResearch/hermes-agent/pull/154019) merges, `hermes plugins install so101-arm` installs it by name. Until then, use `jamesEmerson112/Riz` as above.
 4. Ask for something:
    ```sh
    hermes chat -t so101_arm,vision,skills -q "Pick up the block, then put it back."
@@ -282,6 +289,8 @@ On headless Linux the host renders the camera through EGL (`apt-get install libe
 ## Where it came from
 
 This plugin began at the Naïve Autonomous Company Hackathon at YC in San Francisco (Nov 7–8, 2026). This repo is a rewrite for the Hermes Agent Plugin Hackathon. It adds a new LeRobot driver, the camera and aim correction, and a self-contained sim.
+
+Its Plugin Hackathon entry is [a pull request to Hermes's plugin catalog](https://github.com/NousResearch/hermes-agent/pull/154019), pinned to commit `0920366`. It is open and awaits a maintainer's review.
 
 ## License
 
