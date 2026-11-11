@@ -148,7 +148,7 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   - gpt-oss-20b is from another model family that nothing was tuned on. It gets the text Hermes sends a model without vision, so it works from the measured `block_mm` alone. Its one miss picked the block and then forgot to release it.
   - The last change, at `87e77b1`, makes a successful pick's reply lead with the release step.
     - gpt-oss-20b then forgot no releases: it passed 29 of 30 jobs that use `arm_pick_up`, and the miss was an empty reply.
-    - The 9B passed those jobs 18 of 18.
+    - The 9B and the 4B each passed those jobs 18 of 18.
   - A pick passes only if the block was held, the gripper ends empty and no incident is left open. A hand-off passes only if a person has the incident and the reply says so.
 
   With thinking on (Qwen3.5's default), the 9B passed 27 of 30 and the 4B 29 of 30. Every miss ended in an empty reply: the model wrote its answer, or its next step, inside its thinking, and the reply text came back empty. Turn thinking off for this plugin, or use a client that shows the thinking.
