@@ -91,14 +91,17 @@ def test_look_and_correct_through_the_plugin(agent):
     host("inject", fault="block_shift", params={"dx_mm": 30, "dy_mm": -10})
     missed = use("arm_pick_up")
     assert not missed["picked_up"] and missed["failed_at"] in ("grip", "lift"), missed
+    assert "arm_look" in missed["hint"] and "to_pick_it" in missed["hint"]
     use("arm_release")
     use("arm_go_home")
     seen = use("arm_look")
     assert seen["_multimodal"] is True                                  # the image goes to the model itself
     text, image = seen["content"]
     assert base64.b64decode(image["image_url"]["url"].split(",", 1)[1]).startswith(b"\x89PNG")
-    assert json.loads(text["text"].split("\n\n")[0])["aim_mm"] == [0.0, 0.0]
-    assert use("arm_pick_up", {"dx_mm": 30, "dy_mm": -10})["picked_up"]
+    seen = json.loads(text["text"].split("\n\n")[0])
+    assert seen["aim_mm"] == [0.0, 0.0] and seen["block_mm"] == [30, -10]
+    fix = seen["to_pick_it"]                                             # what the model is told to send
+    assert use(fix["tool"], {"dx_mm": fix["dx_mm"], "dy_mm": fix["dy_mm"]})["picked_up"]
     use("arm_release")
     host("clear")
 

@@ -108,6 +108,8 @@ def test_the_agent_corrects_its_aim_from_the_grid_when_the_block_moved(host):
     seen = host("look")
     assert Path(seen["top"]).exists() and Path(seen["side"]).exists() and seen["grid_mm"] == 10
     assert "top_png_b64" not in seen
+    assert seen["block_seen"] and seen["block_mm"] == [30, -10]         # measured from the image, plain code
+    assert seen["to_pick_it"] == {"tool": "arm_pick_up", "dx_mm": 30, "dy_mm": -10}
     inline = host("look", aim_mm=[30, -10], inline=True)              # what the plugin hands a vision model
     assert base64.b64decode(inline["top_png_b64"]).startswith(b"\x89PNG") and inline["aim_mm"] == [30, -10]
     assert host("skill", name="approach", offset_mm=[30, -10])["result"]["arrived"]

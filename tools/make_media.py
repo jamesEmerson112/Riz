@@ -184,8 +184,8 @@ def correct():
     run(film, skills, dog, "go_home", "arm_go_home")
     eye = Eye(arm, tempfile.mkdtemp(prefix="so101-media-"))
     seen = eye.look((0, 0))
-    film.show(seen["top"], "arm_look", "the agent reads the grid: block at +30, -10 mm from the red aim", "warn",
-              hold=40)
+    film.show(seen["top"], "arm_look", f"block_mm {seen['block_mm']}: measured on the map; the image confirms it",
+              "warn", hold=40)
     preview = eye.look((30, -10))
     eye.r.close()
     film.show(preview["top"], "arm_look dx_mm=30 dy_mm=-10", "preview: the aim now sits on the block", "ok", hold=28)

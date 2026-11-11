@@ -39,7 +39,8 @@ SKILLS = {
     "arm_grip": ("grip", "Close the gripper. The result's grasp.holding says whether it holds something (the "
                          "jaws stopped short of closed, with load)."),
     "arm_lift": ("lift", "Lift the gripper about 30 mm and check it is still holding."),
-    "arm_release": ("release", "Open the gripper."),
+    "arm_release": ("release", "Open the gripper. Right after arm_lift, this sets the block back down where it was "
+                               "picked up (the lift is only about 30 mm), which is how to put it back."),
     "arm_park": ("park", "Fold the arm to its rest pose and switch torque off. Always allowed, even during a fault."),
 }
 MOTION = {"arm_go_home", "arm_reach", "arm_approach", "arm_grip", "arm_lift", "arm_release", "arm_play",
@@ -135,10 +136,11 @@ def pick_up(args=None, **kwargs):
         result = reply.get("result") or {}
         steps.append({"step": name, "ok": bool(reply.get("ok") and ok(result)), "reply": reply})
         if not steps[-1]["ok"]:
-            return _json({"ok": False, "picked_up": False, "failed_at": name, "steps": steps,
-                          "hint": "check arm_status: an incident means repair first. A grip that closed on "
-                                  "nothing usually means the block isn't where the arm aimed: arm_release, "
-                                  "arm_go_home, arm_look, then retry with dx_mm/dy_mm from the grid."})
+            hint = ("The arm is parked by a fault: check arm_status and repair first." if name == "approach" else
+                    "The jaws closed on nothing, so the block isn't where the arm aimed. Do arm_release, then "
+                    "arm_look: it measures where the block is and gives the exact arm_pick_up dx_mm/dy_mm in "
+                    "its to_pick_it field. Retry with those numbers.")
+            return _json({"ok": False, "picked_up": False, "failed_at": name, "steps": steps, "hint": hint})
     return _json({"ok": True, "picked_up": True, "steps": steps})
 
 
@@ -266,13 +268,14 @@ def register(ctx):
                                       "dx_mm/dy_mm correct the aim (read them off arm_look's grid).", OFFSET))
     ctx.register_tool(
         name="arm_look", toolset=TOOLSET, handler=look,
-        schema=_schema("arm_look", "Look at the work area (sim): a top-down table map with a 10 mm grid, the "
-                                   "block, a red + where the arm will aim and a blue x where the jaws are, plus "
-                                   "a side view. The top view comes back in the result as an image (if you "
-                                   "can't see it, open the 'top' path with vision_analyze). Read the block "
-                                   "centre's offset from the red + in grid squares and pass it as dx_mm/dy_mm "
-                                   "to arm_approach or arm_pick_up. Pass dx_mm/dy_mm here to preview an aim "
-                                   "without moving.", OFFSET))
+        schema=_schema("arm_look", "Look at the work area (sim): a top-down map of the table with a 10 mm grid "
+                                   "numbered in dx_mm/dy_mm, the block, a red + where the arm will aim and a blue "
+                                   "x where the jaws are. The result has the map as an image, and block_mm: where "
+                                   "plain code measured the block's centre on that grid. To pick the block up, "
+                                   "call arm_pick_up with the to_pick_it numbers (dx_mm, dy_mm); check them "
+                                   "against the image first. If you can't see the image, open the 'top' path "
+                                   "with vision_analyze. Pass dx_mm/dy_mm here to preview an aim without "
+                                   "moving.", OFFSET))
     ctx.register_tool(
         name="arm_status", toolset=TOOLSET, handler=status,
         schema=_schema("arm_status", "Read the arm: open incidents (and whether a person has one), servo alarm "

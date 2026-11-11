@@ -24,10 +24,10 @@ The user asks you to move the arm, pick something up, play a taught motion, or f
 3. To put it down: `arm_release`, then `arm_go_home`.
 
 If a step fails without an incident (for example the grip closed on nothing), the block probably isn't where the arm was taught to find it:
-1. `arm_release`, `arm_go_home`, then `arm_look`.
-2. Read the top view. It comes back in `arm_look`'s result as an image; if you can't see it, open the `top` path with `vision_analyze`. Forward (+x) is up, +y is left, each grid square is 10 mm, and the grid lies in the plane of the block's top face. Find the centre of the block's top face and count the squares from the red **+** (where the arm aims). The pick tolerates a few mm of error, so a reading to the nearest 5 mm is enough.
-3. Retry with that correction: `arm_pick_up` with `dx_mm` (forward) and `dy_mm` (left). Each is limited to 40 mm; the host refuses more.
-4. Optionally preview first: `arm_look` with the same `dx_mm`/`dy_mm` moves the red **+** without moving the arm.
+1. `arm_release`, then `arm_look`.
+2. Read its result. `block_mm` is where plain code measured the block's centre on the map, and `to_pick_it` holds the `arm_pick_up` call that aims there. Check that against the image: the grid's numbers are the `dx_mm`/`dy_mm` to pass, up is forward (+dx), left is +dy, and the red **+** is where the arm aims now.
+3. Retry: `arm_pick_up` with those `dx_mm`/`dy_mm`. Each is limited to 40 mm; the host refuses more.
+4. Optionally preview first: `arm_look` with the same `dx_mm`/`dy_mm` moves the red **+** onto the block without moving the arm.
 
 After two failed corrections, stop and tell the user what you saw.
 

@@ -9,7 +9,7 @@ It runs on your laptop against a MuJoCo twin of the arm. The same arm host has a
 
 ![Sim: the block gets bumped and the pick closes on nothing; arm_look shows the block's offset on the grid (+30, -10 mm); a preview puts the aim on the block; the corrected pick holds it.](media/correct.gif)
 
-*Scripted in the sim with the same skills the tools call. Someone bumps the block 30 mm and the pick closes on nothing. `arm_look` shows the offset on the grid, a preview checks the new aim, and the corrected pick holds. [Measured in the sim](#measured-in-the-sim) shows a vision model reading these maps blind.*
+*Scripted in the sim with the same skills the tools call. Someone bumps the block 30 mm and the pick closes on nothing. `arm_look` measures where the block is and shows it on the grid, a preview checks the new aim, and the corrected pick holds. [Measured in the sim](#measured-in-the-sim) shows a vision model reading these maps blind.*
 
 The model never sends joint angles and never sits in the control loop:
 - it chooses named skills;
@@ -24,9 +24,10 @@ The model never sends joint angles and never sits in the control loop:
   - `arm_pick_up` runs approach, grip and lift, checking after each.
   - `arm_play` plays a motion taught on the arm; the sim ships a wave.
 - **Looks and corrects.**
-  - `arm_look` returns a top-down map of the table: a 10 mm grid, a red + where the arm will aim, and a blue x where the jaws are.
-  - The image comes back inside the tool result, so a vision model reads it directly. Any other model gets a text summary that points it at `vision_analyze`.
-  - The agent passes the offset it reads as `dx_mm`/`dy_mm`, and the arm host refuses anything past 40 mm per axis.
+  - `arm_look` returns a top-down map of the table: a grid numbered in the `dx_mm`/`dy_mm` the tools take, a red + where the arm will aim, and a blue x where the jaws are.
+  - It also measures the block on that map in plain code. `block_mm` gives where the block's centre is, and `to_pick_it` gives the `arm_pick_up` call that aims there.
+  - The image comes back inside the tool result, so a vision model can check the measurement against the map. A text-only model still gets the numbers.
+  - The arm host refuses any aim past 40 mm per axis.
 - **Heals.**
   - A watchdog in plain code checks every reading: a frozen or stuck distance sensor, a distance that disagrees with the arm's pose, a joint that stalls, a servo alarm.
   - On a fault it parks the arm and opens an incident.
@@ -100,7 +101,7 @@ Plant a fault from another terminal, then give the agent a job. Between tries, r
 | `arm_pick_up` | Approach, grip and lift, stopping at the first step that fails. Takes `dx_mm`/`dy_mm` | yes |
 | `arm_play` | Plays a taught motion at 0.25–1.0 of its recorded speed, never faster | yes |
 | `arm_park` | Folds the arm to rest and turns torque off. Always allowed | to rest |
-| `arm_look` | Top-down table map with the grid, the aim and the jaws, plus a side view (sim). `dx_mm`/`dy_mm` preview an aim | no |
+| `arm_look` | Top-down table map with the grid, the aim and the jaws, plus a side view (sim), and `block_mm`/`to_pick_it` measured on it. `dx_mm`/`dy_mm` preview an aim | no |
 | `arm_status` | Incidents, servo alarms, grasp, joints, the distance sensor, the freeze, the taught motions | no |
 | `arm_restart_sensor` | Repair: restarts the wrist sensor, then the watchdog re-checks at home | to home |
 | `arm_check` | Re-checks at home without a fix; a joint that still fails goes to a person | to home |
@@ -122,11 +123,28 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
 
 ## Measured in the sim
 
-- **A model can read the grid.**
-  - Setup: a vision model got only four top views, each with the block moved by an amount it wasn't told, plus the tool's how-to-read text. It ran no code.
-  - It read all four offsets to the millimetre: (22, 14), (−18, −27), (33, 6) and (−8, 31) mm.
-  - Picks aimed with its readings held the block 4 times out of 4. The same picks without the correction missed 4 out of 4.
-  - Your model may read less precisely.
+- **An open model runs it.**
+  - Qwen3.5-9B, served by vLLM, drove the plugin through [`tools/agent_eval.py`](tools/agent_eval.py).
+  - The harness makes calls the way Hermes does: the plugin's tools, Hermes's `<available_skills>` prompt, the guard before every call, and the image inside the tool result.
+  - Each run plants a fault in a fresh sim and gives the model one job. The table counts the jobs finished correctly.
+
+  | Job, with the planted fault | Before the open-model pass | Now |
+  |---|---|---|
+  | Pick up the block and put it back | 2/2 | 2/2 |
+  | The same after the block was bumped up to 35 mm | 3/6 (the misses ran out of turns) | 6/6, 3–6 calls |
+  | The same with a frozen wrist sensor | 2/2 | 2/2 |
+  | "Reach for the block" with a dead elbow: hand it to a person | 2/2 | 2/2 |
+  | "Wave at me" while a person has frozen the arm | 2/2 | 2/2 |
+
+  - **The bump was the gap.** Asked to read the block's offset off the grid, the 9B model often got the sideways sign wrong, and it kept retrying.
+  - **The fix:**
+    - `arm_look` now measures the block in plain code and hands over the exact `arm_pick_up` numbers;
+    - the grid is numbered in those same units;
+    - a missed grip says what to do next.
+  - **The skill went unread.** The model never loaded it (Hermes lists it, but loading is up to the model), so each tool's own description and replies carry what it needs.
+- **A vision model can also read the grid itself.**
+  - Setup: a frontier vision model got only four top views from before the plain-code measurement, each with the block moved by an amount it wasn't told. It ran no code.
+  - It read all four offsets to the millimetre: (22, 14), (−18, −27), (33, 6) and (−8, 31) mm. The picks aimed with its readings held 4 out of 4, and without the correction they missed 4 out of 4.
 - **The aim has some slack.** With the block moved (30, −10) mm, the pick still held with an aim off by up to ±12 mm forward or back. Sideways it held from 12 mm off one way to 4 mm off the other.
 - **29 tests:**
   - the plugin against a fake arm host: registration matches the manifest, every tool, the guard, `/arm`, and no host at all;
@@ -189,6 +207,7 @@ Hermes ──tool calls──▶ so101-arm plugin (__init__.py, standard library
 | `host/so101_host/` | The arm host: skills, watchdog, sim, camera, real-arm driver, CLI |
 | `tests/`, `host/tests/` | The plugin against a fake host; the host, and the plugin with it, on the sim; the real-arm driver on a mock robot |
 | `tools/make_media.py` | Re-records the GIFs above from the sim |
+| `tools/agent_eval.py` | Lets a model on any OpenAI-compatible server drive the plugin in the sim, and scores each run |
 
 ## Development
 
@@ -197,6 +216,16 @@ uv pip install --python .venv/bin/python -e './host[sim,test]' pyyaml
 .venv/bin/python -m pytest -q tests host/tests
 MUJOCO_GL=egl .venv/bin/python tools/make_media.py    # the GIFs; on macOS leave out MUJOCO_GL
 ```
+
+To see how a model of your own drives it, serve the model on any OpenAI-compatible server (vLLM, SGLang, Ollama, LM Studio) and run the scenarios:
+```sh
+AGENT_EVAL_API_KEY=... .venv/bin/python tools/agent_eval.py --base-url http://localhost:8000/v1 --model qwen3.5-9b \
+    --scenarios pick,bumped,frozen,stall,freeze --trials 2 --out runs.jsonl
+```
+- The harness starts a fresh sim host for each run, plants the fault, and prints one line per run.
+- `runs.jsonl` gets every tool call.
+- For a model without vision, add `--image-mode none`: it then gets the text Hermes would send.
+- The only network call is to the model server you name.
 
 On headless Linux the host renders the camera through EGL (`apt-get install libegl1 libgl1 libosmesa6`) and sets `MUJOCO_GL=egl` itself.
 
