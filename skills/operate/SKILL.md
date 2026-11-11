@@ -23,11 +23,15 @@ The user asks you to move the arm, pick something up, play a taught motion, or f
 2. `arm_pick_up` (it runs approach, grip and lift, and stops at the first step that fails), or the three steps yourself: `arm_approach`, `arm_grip`, `arm_lift`.
 3. To put it down: `arm_release`, then `arm_go_home`.
 
-If a step fails without an incident (for example the grip closed on nothing), the block probably isn't where the arm was taught to find it:
+If the grip closes on nothing, the block isn't where the arm was taught to find it. In the sim, `arm_pick_up` measures where the block went and its `hint` names the retry. Otherwise:
 1. `arm_release`, then `arm_look`.
-2. Read its result. `block_mm` is where plain code measured the block's centre on the map, and `to_pick_it` holds the `arm_pick_up` call that aims there. Check that against the image: the grid's numbers are the `dx_mm`/`dy_mm` to pass, up is forward (+dx), left is +dy, and the red **+** is where the arm aims now.
-3. Retry: `arm_pick_up` with those `dx_mm`/`dy_mm`. Each is limited to 40 mm; the host refuses more.
-4. Optionally preview first: `arm_look` with the same `dx_mm`/`dy_mm` moves the red **+** onto the block without moving the arm.
+2. Read its result:
+   - `block_mm` is where plain code measured the block's centre on the map.
+   - `to_pick_it` holds the `arm_pick_up` call that aims there.
+   - Check both against the image. The grid's numbers are the `dx_mm`/`dy_mm` to pass: up is forward (+dx), left is +dy, and the red **+** is where the arm aims now.
+3. Retry: `arm_pick_up` with those `dx_mm`/`dy_mm`. Each is limited to 40 mm, and the host refuses more.
+   - If `arm_look` says `reachable: false`, don't try. Tell the user to move the block back near the marked spot.
+   - If it says `holding: true`, the block is already in the gripper: `arm_release` puts it down.
 
 After two failed corrections, stop and tell the user what you saw.
 
@@ -41,7 +45,7 @@ The arm host checks every reading in plain code. On a fault it parks the arm and
 | `us_noisy`, `us_missing_echo` | the sensor jitters or gets no echo | `arm_restart_sensor`; then `arm_handoff` if it persists |
 | `joint_stall` | a joint stopped short of its target | `arm_check` once. If it still fails, the watchdog hands it to a person: tell the user which joint, and stop |
 
-After a repair, read the result: `verified: true` means the incident closed. Then go home and retry the task once.
+After a repair, read the result: `verified: true` means the incident closed, and its `next` line says what to do. When a move is stopped, the motion tool's own `next` names the one repair to try. Then go home and retry the task once.
 
 ## Handing off
 Use `arm_handoff` with a short reason when the tools can't fix it. The arm stays parked until the person fixes it and runs `/arm check`. Tell the user exactly what failed and what you tried.
