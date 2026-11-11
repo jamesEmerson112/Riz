@@ -177,3 +177,21 @@ def test_the_viewer_log_keeps_the_agents_lines_and_the_context_apart(host):
     assert _board_line({"op": "freeze", "by": "/arm"}, {"ok": True}).startswith("FROZEN by /arm")
     assert _board_line({"op": "status"}, {"ok": True}) is None
     assert host("note", lane="agent", text="arm_go_home -> ok")["ok"]      # the plugin's line, over the socket
+
+
+def test_rehearsal_tries_aims_on_copies_built_from_what_the_camera_saw(host):
+    host("clear")
+    host("repair", action="verify")
+    host("inject", fault="block_shift", params={"dx_mm": 30, "dy_mm": -10})
+    before = host("status")
+    out = host("rehearse", candidates=[[0, 0], [30, -10], [30, 10]])
+    assert out["ok"] and out["copies"] == 3 and out["block_mm_seen"] == [30, -10]
+    held = {(r["dx_mm"], r["dy_mm"]): r["held"] for r in out["results"]}
+    assert held == {(0.0, 0.0): False, (30.0, -10.0): True, (30.0, 10.0): False}
+    assert out["best"] == {"dx_mm": 30.0, "dy_mm": -10.0} and "sheet_png_b64" not in out
+    after = host("status")                                    # the main arm didn't move or pick anything up
+    assert after["parked"] == before["parked"] and not after["grasp"]["holding"] and not after["incidents"]
+    nine = host("rehearse", inline=True)                      # no aims given: nine around the seen block
+    assert nine["copies"] == 9 and nine["held"] >= 1 and base64.b64decode(nine["sheet_png_b64"])[:4] == b"\x89PNG"
+    assert "beyond the 40 mm" in host("rehearse", candidates=[[45, 0]])["error"]
+    host("clear")

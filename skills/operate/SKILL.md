@@ -29,7 +29,8 @@ If the grip closes on nothing, the block isn't where the arm was taught to find 
    - `block_mm` is where plain code measured the block's centre on the map.
    - `to_pick_it` holds the `arm_pick_up` call that aims there.
    - Check both against the image. The grid's numbers are the `dx_mm`/`dy_mm` to pass: up is forward (+dx), left is +dy, and the red **+** is where the arm aims now.
-3. Retry: `arm_pick_up` with those `dx_mm`/`dy_mm`. Each is limited to 40 mm, and the host refuses more.
+3. Rehearse (sim): `arm_rehearse` with a few aims around `block_mm` (or none, for nine around it). Simulated copies of the arm try each one; the main arm doesn't move. Its `best` is the aim that held nearest the block.
+4. Retry: `arm_pick_up` with that `dx_mm`/`dy_mm`. Each is limited to 40 mm, and the host refuses more.
    - If `arm_look` says `reachable: false`, don't try. Tell the user to move the block back near the marked spot.
    - If it says `holding: true`, the block is already in the gripper: `arm_release` puts it down.
 

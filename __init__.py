@@ -50,8 +50,8 @@ SKILLS = {
 }
 MOTION = {"arm_go_home", "arm_reach", "arm_approach", "arm_grip", "arm_lift", "arm_release", "arm_play",
           "arm_pick_up"}
-TOOLS = [*SKILLS, "arm_play", "arm_pick_up", "arm_look", "arm_status", "arm_restart_sensor", "arm_check",
-         "arm_handoff"]
+TOOLS = [*SKILLS, "arm_play", "arm_pick_up", "arm_look", "arm_rehearse", "arm_status", "arm_restart_sensor",
+         "arm_check", "arm_handoff"]
 OFFSET = {"dx_mm": {"type": "number", "description": "aim this many mm forward (+) or back (-) of the taught "
                                                      "block spot, at most 40"},
           "dy_mm": {"type": "number", "description": "aim this many mm left (+) or right (-), at most 40"}}
@@ -232,7 +232,8 @@ def _missed_block_hint():
         return (f"The jaws closed on nothing: the block was moved to dx_mm={bx}, dy_mm={by}, past the 40 mm the arm "
                 "may correct. Do arm_release, then tell the user to move it back near the marked spot."), measured
     return (f"The jaws closed on nothing: the block was moved. Plain code measured it at dx_mm={bx}, dy_mm={by}. "
-            f"Do arm_release, then arm_pick_up with dx_mm={bx} and dy_mm={by}."), measured
+            f"Do arm_release, then arm_rehearse with aims around dx_mm={bx}, dy_mm={by} to test them on simulated "
+            "copies, then arm_pick_up with its best aim."), measured
 
 
 def look(args=None, **kwargs):
@@ -254,6 +255,36 @@ def look(args=None, **kwargs):
             "text_summary": text + "\n\nThe numbers above were measured for you: use to_pick_it. (The map "
                                    "image is at the 'top' path, for vision_analyze if you want to look.)",
             "meta": {"image_path": reply.get("top"), "native_vision": True}}
+
+
+def rehearse(args=None, **kwargs):
+    """Try candidate aims on simulated copies of the arm, built from what the camera saw; the main arm
+    doesn't move. The copies' last frames come back as one image, like arm_look's map."""
+    raw = (args or {}).get("candidates") or []
+    if not isinstance(raw, list):
+        return _json({"ok": False, "error": "candidates must be a list of {dx_mm, dy_mm}"})
+    try:
+        aims = [[float(c.get("dx_mm") or 0.0), float(c.get("dy_mm") or 0.0)] for c in raw]
+    except (AttributeError, TypeError, ValueError):
+        return _json({"ok": False, "error": "each candidate is {dx_mm, dy_mm}, two numbers"})
+    reply = _call("rehearse", candidates=aims, inline=True)
+    png = reply.pop("sheet_png_b64", None)
+    if reply.get("ok"):
+        best = reply.get("best")
+        if best:
+            reply = {"next": f"{reply['held']} of {reply['copies']} copies held. Now do it on the main arm: "
+                             f"arm_pick_up with dx_mm={best['dx_mm']:g} and dy_mm={best['dy_mm']:g}.", **reply}
+        else:
+            reply = {"next": f"None of the {reply['copies']} copies held. Try aims closer to block_mm_seen, or tell "
+                             "the user what the copies show.", **reply}
+    text = _json(reply)
+    if not (reply.get("ok") and png):
+        return text
+    return {"_multimodal": True,
+            "content": [{"type": "text", "text": text + "\n\nThe copies' last frames are attached, one tile per "
+                                                       "candidate, labelled HELD or missed."},
+                        {"type": "image_url", "image_url": {"url": "data:image/png;base64," + png}}],
+            "text_summary": text, "meta": {"native_vision": True}}
 
 
 def status(args=None, **kwargs):
@@ -467,6 +498,18 @@ def register(ctx):
                                    "the marked spot. If you can't see the image, open the 'top' path "
                                    "with vision_analyze. Pass dx_mm/dy_mm here to preview an aim without "
                                    "moving.", OFFSET))
+    ctx.register_tool(
+        name="arm_rehearse", toolset=TOOLSET, handler=rehearse,
+        schema=_schema("arm_rehearse", "Rehearse before retrying (sim): try up to 16 candidate aims on simulated "
+                                       "copies of the arm, built from where the camera sees the block. The main "
+                                       "arm doesn't move. Each copy runs the pick (approach, grip, lift) at its "
+                                       "aim and reports held or missed; the result has the best aim and an image "
+                                       "of every copy. Use it after a missed pick: pass aims around block_mm "
+                                       "(or none, for nine around it), then arm_pick_up on the main arm with "
+                                       "the best one.",
+                       {"candidates": {"type": "array", "maxItems": 16, "description": "the aims to try, each "
+                                       "{dx_mm, dy_mm} within 40 mm; empty tries nine around the seen block",
+                                       "items": {"type": "object", "properties": OFFSET}}}))
     ctx.register_tool(
         name="arm_status", toolset=TOOLSET, handler=status,
         schema=_schema("arm_status", "Read the arm: open incidents (and whether a person has one), servo alarm "

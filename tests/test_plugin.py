@@ -85,6 +85,13 @@ class FakeHost:
             if req.get("inline") and st.get("inline_png", True):
                 reply["top_png_b64"] = "iVBORw0KGgo="
             return reply
+        if op == "rehearse":
+            self.rehearsed = req
+            reply = {"ok": True, "copies": len(req["candidates"]), "held": 1, "block_mm_seen": [30, -10],
+                     "best": {"dx_mm": 30.0, "dy_mm": -10.0}, "results": []}
+            if req.get("inline"):
+                reply["sheet_png_b64"] = "iVBORw0KGgo="
+            return reply
         if op == "repair":
             return {"ok": True, "action": req["action"], "verified": True}
         if op == "handoff":
@@ -274,6 +281,19 @@ def test_the_viewer_log_gets_tool_steps_guard_blocks_and_context_numbers(plugin)
     assert ("context", "31.2k tokens = 8% of 400.0k, 90% cached, 14 messages") in said
     assert ("memory", "COMPACTED (auto): 12.5k -> 3.1k tokens, 9 messages folded") in said
     assert "never sent" not in json.dumps(said) and "secret" not in json.dumps(said)
+
+
+def test_rehearse_sends_the_aims_and_hands_back_the_copies_and_the_best_aim(plugin):
+    mod, ctx, host = plugin
+    rehearse = ctx.tools["arm_rehearse"][2]
+    out = rehearse({"candidates": [{"dx_mm": 0, "dy_mm": 0}, {"dx_mm": 30, "dy_mm": -10}]}, task_id="t1")
+    assert host.rehearsed["candidates"] == [[0.0, 0.0], [30.0, -10.0]] and host.rehearsed["inline"]
+    assert out["_multimodal"] and out["content"][1]["image_url"]["url"].startswith("data:image/png;base64,")
+    said = json.loads(out["text_summary"])
+    assert said["next"].endswith("arm_pick_up with dx_mm=30 and dy_mm=-10.")
+    assert "arm_rehearse" not in mod.MOTION                       # the main arm doesn't move: no guard
+    assert not json.loads(rehearse({"candidates": [{"dx_mm": "far"}]}))["ok"]
+    assert not json.loads(rehearse({"candidates": "everywhere"}))["ok"]
 
 
 def test_handoff_needs_an_open_incident(plugin):

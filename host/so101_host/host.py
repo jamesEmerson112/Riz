@@ -10,6 +10,7 @@ follower takes seconds to start, so the real arm also wants exactly one long-liv
     {"op": "handoff", "id": "inc-1", "reason": ...}          a person takes an open incident
     {"op": "freeze", "by": ...} / {"op": "unfreeze", "by": ...}   the operator's kill switch
     {"op": "inject", "fault": "us_frozen"} / {"op": "clear"}  plant or clear a fault (sim only, demos)
+    {"op": "rehearse", "candidates": [[dx, dy], ...]}         sim: try aims on simulated copies (rehearse.py)
     {"op": "note", "lane": "agent" | "memory" | "context", "text": ...}   a line for the viewer's log
 
 The watchdog is plain code (`level1.py`), never a model: on each distance row and after each move it
@@ -405,6 +406,10 @@ def _board_line(req, reply):
     if reply.get("incident"):
         inc = reply["incident"]
         return f"WATCHDOG parked the arm: {inc.get('kind')} - {inc.get('summary', '')}"
+    if op == "rehearse" and reply.get("ok"):
+        best = reply.get("best")
+        return (f"REHEARSED on {reply['copies']} sim copies: {reply['held']} held; best aim "
+                + (f"({best['dx_mm']:g}, {best['dy_mm']:g})" if best else "none"))
     if op == "inject" and reply.get("ok"):
         return f"fault planted: {req.get('fault')} {req.get('params') or ''}".strip()
     if op == "clear":
@@ -568,6 +573,30 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
                 return {"ok": False, "error": f"the sim camera can't render here ({type(exc).__name__}: {exc}). "
                                               "On headless Linux set MUJOCO_GL=egl (or osmesa) before starting "
                                               "the host; on macOS no setting is needed."}
+        if op == "rehearse":                          # try aims on simulated copies; the main arm doesn't move
+            if arm_kind != "sim":
+                return {"ok": False, "error": "no camera on the real arm in this version, so nothing to rehearse from"}
+            if state.get("eye") is None:
+                from .camera import Eye
+                state["eye"] = Eye(arm, data_dir() / "frames")
+            seen = state["eye"].look((0.0, 0.0))
+            if arm.grasp_check().get("holding"):
+                return {"ok": False, "error": "the gripper is holding the block: arm_release sets it down first"}
+            if not seen.get("block_mm"):
+                return {"ok": False, "error": "the camera found no block on the map to rehearse against"}
+            if max(abs(v) for v in seen["block_mm"]) > MAX_OFFSET_MM:
+                return {"ok": False, "error": f"the block is seen at {seen['block_mm']}, past the {MAX_OFFSET_MM:g} mm the "
+                                              "arm may correct: tell the user to move it back near the marked spot"}
+            from .rehearse import MAX_COPIES, around, rehearse
+            aims = []
+            for c in req.get("candidates") or around(seen["block_mm"]):
+                aim, why = check_offset(c)
+                if why:
+                    return {"ok": False, "error": f"candidate {c}: {why}"}
+                aims.append(aim)
+            if len(aims) > MAX_COPIES:
+                return {"ok": False, "error": f"at most {MAX_COPIES} candidates at a time"}
+            return {"ok": True, **rehearse(seen["block_mm"], aims, picture=bool(req.get("inline")))}
         if op == "read":
             return {"ok": True, "pos": arm.read()}
         if op == "distance":

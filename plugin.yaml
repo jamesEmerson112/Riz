@@ -24,6 +24,7 @@ provides_tools:
   - arm_play
   - arm_pick_up
   - arm_look
+  - arm_rehearse
   - arm_status
   - arm_restart_sensor
   - arm_check

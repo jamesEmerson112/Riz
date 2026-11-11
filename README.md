@@ -17,7 +17,7 @@ The model never sends joint angles and never sits in the control loop:
 - motion stays refused until a repair passes a check;
 - no tool can lift a freeze. A person's `/arm unfreeze` does.
 
-It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with vLLM, finished all 27 test jobs, faults included, and gpt-oss-20b, a text-only model from another family, finished 26. Those jobs were driven by [`tools/agent_eval.py`](tools/agent_eval.py), which calls the plugin the way Hermes does ([the numbers](#measured-in-the-sim)). In Hermes itself (0.23.0, with gpt-6-astra), the jobs in [Things to try](#things-to-try) passed in all 10 runs: a plain pick (1 run), a bumped block (3), a frozen sensor (2), a dead elbow handed to a person (2), and a freeze it refused to move through (2).
+It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with vLLM, finished all 27 test jobs, faults included, and gpt-oss-20b, a text-only model from another family, finished 26. Those jobs were driven by [`tools/agent_eval.py`](tools/agent_eval.py), which calls the plugin the way Hermes does ([the numbers](#measured-in-the-sim)). In Hermes itself (0.23.0, with gpt-6-astra), the jobs in [Things to try](#things-to-try) passed in all 10 runs: a plain pick (1 run), a bumped block (3), a frozen sensor (2), a dead elbow handed to a person (2), and a freeze it refused to move through (2). Astra also read `arm_look`'s map as an image: asked, it named the block's colour on the map, which no text gives. With [rehearsal](#what-it-does) it missed a bumped block, tried nine aims on simulated copies, sent the best to the arm and held the block.
 
 ## What it does
 
@@ -30,6 +30,10 @@ It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with
   - It also measures the block on that map in plain code. `block_mm` gives where the block's centre is, and `to_pick_it` gives the `arm_pick_up` call that aims there.
   - The image comes back inside the tool result, so a vision model can check the measurement against the map. A text-only model still gets the numbers.
   - The arm host refuses any aim past 40 mm per axis.
+- **Rehearses before it retries** (sim).
+  - After a miss, `arm_rehearse` tries up to 16 candidate aims on simulated copies of the arm. Each copy is a fresh sim with the block where the camera saw it, never where the sim really has it, so the copies know only what the arm saw.
+  - Each copy runs the same pick (approach, grip, lift) and reports held or missed. The result names the best aim (the one that held nearest where the block was seen) and shows every copy in one image.
+  - The agent then sends that aim to the main arm, which never moves during a rehearsal. A copy's pick takes about 0.15 s of CPU, so 16 copies take about 3 s on a laptop.
 - **Heals.**
   - A watchdog in plain code checks every reading: a frozen or stuck distance sensor, a distance that disagrees with the arm's pose, a joint that stalls, a servo alarm.
   - On a fault it parks the arm and opens an incident.
@@ -105,6 +109,7 @@ Plant a fault from another terminal, then give the agent a job. Between tries, r
 | `arm_play` | Plays a taught motion at 0.25–1.0 of its recorded speed, never faster | yes |
 | `arm_park` | Folds the arm to rest and turns torque off. Always allowed | to rest |
 | `arm_look` | Top-down table map with the grid, the aim and the jaws, plus a side view (sim), and `block_mm`/`to_pick_it` measured on it. `dx_mm`/`dy_mm` preview an aim | no |
+| `arm_rehearse` | Tries up to 16 candidate aims on simulated copies built from what the camera saw; returns held or missed for each, the best aim, and an image of every copy (sim) | no (copies only) |
 | `arm_status` | Incidents, servo alarms, grasp, joints, the distance sensor, the freeze, the taught motions | no |
 | `arm_restart_sensor` | Repair: restarts the wrist sensor, then the watchdog re-checks at home | to home |
 | `arm_check` | Re-checks at home without a fix; a joint that still fails goes to a person | to home |
@@ -174,9 +179,9 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   - Setup: a frontier vision model got only four top views from before the plain-code measurement, each with the block moved by an amount it wasn't told. It ran no code.
   - It read all four offsets to the millimetre: (22, 14), (−18, −27), (33, 6) and (−8, 31) mm. The picks aimed with its readings held 4 out of 4, and without the correction they missed 4 out of 4.
 - **The aim has some slack.** With the block moved (30, −10) mm, the pick still held with an aim off by up to ±12 mm forward or back. Sideways it held from 12 mm off one way to 4 mm off the other.
-- **36 tests:**
+- **40 tests:**
   - the plugin against a fake arm host: registration matches the manifest, every tool, the guard, `/arm`, and no host at all;
-  - the arm host on the sim: the pick, a frozen sensor healed, a dead elbow handed to a person, the freeze, look-and-correct, and bounded offsets;
+  - the arm host on the sim: the pick, a frozen sensor healed, a dead elbow handed to a person, the freeze, look-and-correct, bounded offsets, rehearsal on copies, and the viewer's log;
   - the real plugin against the real sim host, calling the guard and then the tool as Hermes does: look-and-correct, a frozen sensor blocked and then healed, and the freeze;
   - the real-arm driver against a mock robot.
 
@@ -228,12 +233,13 @@ Hermes ──tool calls──▶ so101-arm plugin (__init__.py, standard library
                         ├─ skills: go_home, reach, approach, grip, lift, release, park, play
                         ├─ watchdog: level-1 checks → park → incident → repair → verify at home
                         ├─ camera (sim): the top view with the 10 mm grid
+                        ├─ rehearsal (sim): fresh copies try candidate aims; the main arm waits
                         └─ arm: MuJoCo SO-101 (Menagerie), or a real SO-101 through LeRobot 0.7
 ```
 
 | Path | What's there |
 |---|---|
-| `plugin.yaml`, `__init__.py` | The Hermes plugin: 14 tools, the guard, `/arm` |
+| `plugin.yaml`, `__init__.py` | The Hermes plugin: 15 tools, the guard, the viewer's log, `/arm` |
 | `skills/operate/SKILL.md` | How to run the arm, look and correct, and heal |
 | `host/so101_host/` | The arm host: skills, watchdog, sim, camera, real-arm driver, CLI |
 | `tests/`, `host/tests/` | The plugin against a fake host; the host, and the plugin with it, on the sim; the real-arm driver on a mock robot |
@@ -263,6 +269,7 @@ On headless Linux the host renders the camera through EGL (`apt-get install libe
 ## Next
 
 - A real camera with the same grid: a fixed overhead USB camera calibrated to the table.
+- Rehearsal at scale: thousands of copies on a GPU with MuJoCo Warp or MJX, copies that carry the arm's known faults, and more controls to search than the aim (grip force, approach speed).
 - The wrist distance sensor on the real arm, so the sensor checks run there too.
 - More than one object, picked by name.
 
