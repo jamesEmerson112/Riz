@@ -28,11 +28,14 @@ def _camera():
     return cam
 
 
-def _pick(model, block_mm, aim_mm):
-    """One copy: the block where it was seen, then the agent's pick at this aim. Returns (result, copy)."""
+def _pick(model, block_mm, aim_mm, path=None):
+    """One copy: the block where it was seen, then the agent's pick at this aim. Returns (result, copy).
+    With `path` (a list), the copy's pose at every control tick is appended to it, for a replay."""
     from .host import Skills                                  # host imports this module: import late
     copy = SimArm(model, start=prims.REST)
     copy.shift_block(*block_mm)
+    if path is not None:
+        copy.hooks.append(lambda a: path.append(a.d.qpos.copy()))
     skills = Skills(copy)
     skills.go_home()
     steps = {"approach": skills.approach(tuple(aim_mm))}
@@ -60,14 +63,17 @@ def around(block_mm, step=8.0, limit=40.0):
     return [(clip(block_mm[0] + i * step), clip(block_mm[1] + j * step)) for i in (-1, 0, 1) for j in (-1, 0, 1)]
 
 
-def rehearse(block_mm, candidates, *, picture=True):
+def rehearse(block_mm, candidates, *, picture=True, show=None):
     """Run each candidate aim on its own copy. Returns the ranked results, the best aim, and a contact
-    sheet of the copies' last frames (PNG, base64) when `picture`."""
+    sheet of the copies' last frames (PNG, base64) when `picture`. With `show`, every copy's motion is
+    handed over afterwards as show(model, paths, held), for the viewer to replay them side by side."""
     model = build()
     renderer = mujoco.Renderer(model, TILE_H, TILE_W) if picture else None
-    results, tiles = [], []
+    results, tiles, paths = [], [], []
     for aim in candidates[:MAX_COPIES]:
-        result, copy = _pick(model, block_mm, aim)
+        path = [] if show else None
+        result, copy = _pick(model, block_mm, aim, path)
+        paths.append(path)
         results.append(result)
         if renderer:
             renderer.update_scene(copy.d, _camera())
@@ -77,6 +83,8 @@ def rehearse(block_mm, candidates, *, picture=True):
             d.text((6, 4), f"#{len(results)}  dx {aim[0]:+g}  dy {aim[1]:+g}  " + ("HELD" if result["held"] else
                     f"missed ({result['failed_at']})"), fill=(0, 0, 0) if result["held"] else (255, 255, 255))
             tiles.append(tile)
+    if show:
+        show(model, paths, [r["held"] for r in results])
     best = _best(results, block_mm)
     out = {"copies": len(results), "held": sum(r["held"] for r in results), "block_mm_seen": list(block_mm),
            "best": best and {"dx_mm": best["dx_mm"], "dy_mm": best["dy_mm"]}, "results": results}

@@ -432,6 +432,48 @@ def _overlay(viewer):
     return show
 
 
+def _copies_on_view(viewer, *, gap=0.45, fps=25, step=3, linger=2.0):
+    """Replay a rehearsal's copies in the viewer: every copy at once, as an extra arm in a grid behind the
+    main one, at about 1.7x speed; at the end the copies that missed turn red. Looks only: the copies have
+    already run, and this draws their recorded poses into the viewer's own scene."""
+    import mujoco
+
+    def show(model, paths, held):
+        cols = 3 if len(paths) > 4 else 2
+        offsets = [(-gap * (1 + i // cols), gap * (i % cols - (cols - 1) / 2), 0.0) for i in range(len(paths))]
+        d, opt, pert = mujoco.MjData(model), mujoco.MjvOption(), mujoco.MjvPerturb()
+        cam = viewer.cam
+        saved = (cam.lookat.copy(), cam.distance, cam.azimuth, cam.elevation)
+        rows = -(-len(paths) // cols)
+        cam.lookat[:] = [-gap * (rows + 1) / 2, 0.0, 0.1]
+        cam.distance, cam.azimuth, cam.elevation = 0.9 + 0.45 * rows, 200.0, -32.0
+        frames = max(len(p) for p in paths)
+        for f in list(range(0, frames, step)) + [frames - 1] * int(linger * fps):
+            last = f == frames - 1
+            with viewer.lock():
+                scn = viewer.user_scn
+                scn.ngeom = 0
+                for path, (ox, oy, oz), ok in zip(paths, offsets, held):
+                    d.qpos[:] = path[min(f, len(path) - 1)]
+                    mujoco.mj_forward(model, d)
+                    first = scn.ngeom
+                    mujoco.mjv_addGeoms(model, d, opt, pert, mujoco.mjtCatBit.mjCAT_ALL, scn)
+                    for g in range(first, scn.ngeom):
+                        geom = scn.geoms[g]
+                        if geom.objtype == mujoco.mjtObj.mjOBJ_GEOM and model.geom_bodyid[geom.objid] == 0:
+                            geom.rgba[3] = 0.0                # the copy's own floor: the main one shows
+                        geom.pos[:] = geom.pos + (ox, oy, oz)
+                        if last and not ok:
+                            geom.rgba[:3] = (0.9, 0.15, 0.15)
+            viewer.sync()
+            time.sleep(1.0 / fps)
+        with viewer.lock():
+            viewer.user_scn.ngeom = 0
+        cam.lookat[:], cam.distance, cam.azimuth, cam.elevation = saved
+        viewer.sync()
+    return show
+
+
 def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
     """arm_kind="sim": the MuJoCo SO-101 with a simulated wrist ultrasonic and plantable faults.
     arm_kind="real": a real SO-101 through LeRobot ($SO101_PORT, $SO101_ID), with taught poses."""
@@ -596,7 +638,8 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
                 aims.append(aim)
             if len(aims) > MAX_COPIES:
                 return {"ok": False, "error": f"at most {MAX_COPIES} candidates at a time"}
-            return {"ok": True, **rehearse(seen["block_mm"], aims, picture=bool(req.get("inline")))}
+            return {"ok": True, **rehearse(seen["block_mm"], aims, picture=bool(req.get("inline")),
+                                           show=_copies_on_view(viewer) if viewer else None)}
         if op == "read":
             return {"ok": True, "pos": arm.read()}
         if op == "distance":
