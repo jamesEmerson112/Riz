@@ -280,11 +280,11 @@ def test_the_video_is_an_mp4_of_the_arm_with_the_log_beside_it(tmp_path):
     board.add("context", "12.1k tokens = 4% of 272.0k")
     video = Video(arm, tmp_path / "run.mp4", board=board, stage=Stage())
     arm.hooks.append(video)
-    arm.hold(0.4)                                            # 20 ticks: 10 frames
+    arm.hold(0.4)                                            # 20 ticks: a frame every 4th, so 5
     video.frame(hold=5)
     path = video.close()
     probe = subprocess.run(["ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries",
                             "stream=width,height,nb_read_frames", "-of", "json", str(path)],
                            capture_output=True, text=True, check=True)
     stream = _json.loads(probe.stdout)["streams"][0]
-    assert (stream["width"], stream["height"]) == (1280, 720) and int(stream["nb_read_frames"]) == 15
+    assert (stream["width"], stream["height"]) == (1280, 720) and int(stream["nb_read_frames"]) == 10

@@ -46,7 +46,8 @@ class Video:
 
     W, H, LOG_W = 1280, 720, 470
 
-    def __init__(self, arm, path, *, board, stage, fps=25, every=2):
+    def __init__(self, arm, path, *, board, stage, fps=25, every=4):     # every 4th tick: ~2x speed, and
+                                                                        # the arm keeps close to real time
         import shutil
         import subprocess
         ffmpeg = shutil.which("ffmpeg")
