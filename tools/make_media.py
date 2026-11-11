@@ -4,7 +4,10 @@
     python tools/make_media.py heal     # just one
 
 Each GIF drives the same Skills and Watchdog the arm host uses, step by step, and captions every frame
-with the tool call the agent would make and what the watchdog said.
+with the tool call the agent would make and what the watchdog said. The GIFs play at 45 ms a frame.
+
+Captions use DejaVu Sans when DejaVuSans.ttf and DejaVuSans-Bold.ttf are on the font path (the current
+folder counts) and fall back to Arial, so run it where DejaVu is found to match the committed media.
 """
 import subprocess
 import sys
@@ -23,6 +26,14 @@ from so101_host.record import RunRecorder  # noqa: E402
 
 W, H = 560, 350
 OUT = ROOT / "media"
+PIXEL = 5                   # the films' look: 5 px blocks in four greys (the bench itself is black and white)
+
+
+def pixelate(img):
+    """Shrink the render PIXEL times, round it to four greys, and scale it back up with hard edges."""
+    small = img.convert("L").resize((img.width // PIXEL, img.height // PIXEL), Image.BOX)
+    small = small.point(lambda v: min(255, round(v / 85) * 85))
+    return small.resize(img.size, Image.NEAREST).convert("RGB")
 
 
 def font(size):
@@ -76,7 +87,7 @@ class Film:
 
     def snap(self, repeat=1):
         self.r.update_scene(self.arm.d, self.cam, self.opt)
-        img = Image.fromarray(self.r.render()).convert("RGB")
+        img = pixelate(Image.fromarray(self.r.render()))
         d = ImageDraw.Draw(img, "RGBA")
         d.rectangle([0, 0, W, 34], fill=(12, 16, 24, 215))
         d.text((12, 6), self.call, font=fit(self.call, 20), fill=(235, 240, 250))
@@ -106,7 +117,10 @@ class Film:
         self.call, self.note, self.tone = call, note, tone
         self.snap(repeat=hold)
 
-    def save(self, name, ms=90):
+    def save(self, name, ms=45):
+        # 45 ms a frame plays the films at twice their recorded pace; a held caption is repeated frames, so it
+        # speeds up with them. GIF stores delays in 10 ms steps and Pillow rounds down, so a lone frame plays
+        # at 40 ms (browsers clamp anything under 20 ms, so don't go lower).
         path = OUT / name
         frames = [f.quantize(colors=96, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE) for f in self.frames]
         frames[0].save(path, save_all=True, append_images=frames[1:], duration=ms, loop=0, optimize=True)

@@ -130,7 +130,8 @@ def test_registration_matches_the_manifest(plugin):
     mod, ctx, _ = plugin
     manifest = yaml.safe_load((ROOT / "plugin.yaml").read_text())
     assert sorted(ctx.tools) == sorted(manifest["provides_tools"])
-    assert sorted(ctx.hooks) == sorted(manifest["provides_hooks"]) == ["pre_tool_call"]
+    assert sorted(ctx.hooks) == sorted(manifest["provides_hooks"]) == ["post_api_request", "post_compaction",
+                                                                       "post_tool_call", "pre_tool_call"]
     assert all(toolset == "so101_arm" for toolset, _, _ in ctx.tools.values())
     assert "arm" in ctx.commands and "operate" in ctx.skills and ctx.skills["operate"].name == "SKILL.md"
     assert ctx.skills["operate"].exists() and ctx.skill_descriptions["operate"].startswith("How to run the SO-101")
@@ -253,6 +254,28 @@ def test_the_guard_blocks_on_servo_alarms_and_a_freeze(plugin):
     assert guard("arm_go_home", {}, task_id="t1") is None
 
 
+def test_the_viewer_log_gets_tool_steps_guard_blocks_and_context_numbers(plugin):
+    mod, ctx, host = plugin
+    notes = lambda: [(r["lane"], r["text"]) for r in host.log if r["op"] == "note"]
+    ctx.hooks["post_tool_call"](tool_name="arm_pick_up", args={"dx_mm": 30, "dy_mm": -10},
+                                result=json.dumps({"ok": False, "picked_up": False, "failed_at": "grip"}))
+    ctx.hooks["post_tool_call"](tool_name="terminal", args={"command": "secret stuff"}, result="whatever")
+    ctx.commands["arm"]("freeze")
+    ctx.hooks["pre_tool_call"]("arm_play", {"motion": "wave"}, task_id="t1")
+    ctx.hooks["post_api_request"](usage={"prompt_tokens": 31200, "cache_read_tokens": 28000, "output_tokens": 120},
+                                  context_length=400000, message_count=14, api_call_count=3,
+                                  assistant_message="never sent", response={"x": "never sent"})
+    ctx.hooks["post_compaction"](kind="auto", reason="threshold", before_tokens=12500, after_tokens=3100,
+                                 messages_removed=9)
+    said = notes()
+    assert ("agent", "arm_pick_up(dx=30, dy=-10) -> FAILED at grip") in said
+    assert ("agent", "terminal") in said                          # other tools: the name only, never the args
+    assert any(lane == "agent" and text.startswith("GUARD blocked arm_play: The arm is frozen") for lane, text in said)
+    assert ("context", "31.2k tokens = 8% of 400.0k, 90% cached, 14 messages") in said
+    assert ("memory", "COMPACTED (auto): 12.5k -> 3.1k tokens, 9 messages folded") in said
+    assert "never sent" not in json.dumps(said) and "secret" not in json.dumps(said)
+
+
 def test_handoff_needs_an_open_incident(plugin):
     mod, ctx, host = plugin
     assert not run(ctx, "arm_handoff", {"reason": "x"})["ok"]
@@ -276,6 +299,8 @@ def test_no_host_is_an_error_reply_not_an_exception(tmp_path):
     out = run(ctx, "arm_go_home")
     assert not out["ok"] and "python -m so101_host serve" in out["error"]
     assert ctx.hooks["pre_tool_call"]("arm_go_home", {}, task_id="t1") is None   # the tool reports it
+    ctx.hooks["post_tool_call"](tool_name="arm_go_home", args={}, result=json.dumps(out))   # the log stays quiet
+    ctx.hooks["post_api_request"](usage={"prompt_tokens": 10}, context_length=None, message_count=2, api_call_count=1)
 
 
 def test_the_plugin_needs_only_the_standard_library():

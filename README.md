@@ -17,7 +17,7 @@ The model never sends joint angles and never sits in the control loop:
 - motion stays refused until a repair passes a check;
 - no tool can lift a freeze. A person's `/arm unfreeze` does.
 
-It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with vLLM, finished all 27 test jobs, faults included, and gpt-oss-20b, a text-only model from another family, finished 26. The jobs were driven by [`tools/agent_eval.py`](tools/agent_eval.py), which calls the plugin the way Hermes does, not yet by Hermes itself ([the numbers](#measured-in-the-sim)).
+It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with vLLM, finished all 27 test jobs, faults included, and gpt-oss-20b, a text-only model from another family, finished 26. Those jobs were driven by [`tools/agent_eval.py`](tools/agent_eval.py), which calls the plugin the way Hermes does ([the numbers](#measured-in-the-sim)). In Hermes itself (0.23.0, with gpt-6-astra), the jobs in [Things to try](#things-to-try) passed in all 10 runs: a plain pick (1 run), a bumped block (3), a frozen sensor (2), a dead elbow handed to a person (2), and a freeze it refused to move through (2).
 
 ## What it does
 
@@ -76,6 +76,7 @@ uv venv --python "$(command -v python3)" .venv
 uv pip install --python .venv/bin/python -e './host[sim]'
 .venv/bin/mjpython -m so101_host serve --view
 ```
+The right side of the viewer then shows what the agent is doing: each tool call and its result, the guard's blocks and the watchdog's parks, and below them how full Hermes's context window is after each model call.
 
 ### Things to try
 
@@ -144,7 +145,9 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   | Pick it up and put it back, twice | — | 3/3 (6) | — | — |
   | Wave, then pick it up and put it back | — | 3/3 (5) | — | — |
 
-  - The "now" columns are the final plugin code, commit `a4128c9`. The 9B ran the hardest jobs 9 times each, at different block positions: 63 of 63 in all. The 4B passed 27 of 27 and gpt-oss-20b 26 of 27.
+  ![The 9B now takes fewer median tool calls on each of the five jobs it ran before this pass; with the block bumped up to 35 mm it went from 4/8 passed at a median of 24 calls to 9/9 at a median of 4.](media/charts/9b_before_now.svg)
+
+  - The "now" columns were measured at commit `a4128c9`. Later changes were checked in Hermes with gpt-6-astra (above), not re-measured here. The 9B ran the hardest jobs 9 times each, at different block positions: 63 of 63 in all. The 4B passed 27 of 27 and gpt-oss-20b 26 of 27.
   - gpt-oss-20b is from another model family that nothing was tuned on. It gets the text Hermes sends a model without vision, so it works from the measured `block_mm` alone. Its one miss picked the block and then forgot to release it.
   - The last change, at `87e77b1`, makes a successful pick's reply lead with the release step.
     - gpt-oss-20b then forgot no releases: it passed 29 of 30 jobs that use `arm_pick_up`, and the miss was an empty reply.
@@ -152,6 +155,8 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   - A pick passes only if the block was held, the gripper ends empty and no incident is left open. A hand-off passes only if a person has the incident and the reply says so.
 
   With thinking on (Qwen3.5's default), the 9B passed 27 of 30 and the 4B 29 of 30. Every miss ended in an empty reply: the model wrote its answer, or its next step, inside its thinking, and the reply text came back empty. Turn thinking off for this plugin, or use a client that shows the thinking.
+
+  ![Runs passed by model. On the final code: the 9B 63 of 63, the 4B 27 of 27, gpt-oss-20b 26 of 27 and the 2B 21 of 27. With thinking on: the 9B 27 of 30 and the 4B 29 of 30. After 87e77b1, on the jobs that use arm_pick_up: the 9B and the 4B 18 of 18, gpt-oss-20b 29 of 30.](media/charts/runs_passed.svg)
 - **4B is the floor.**
   - On the final code, Qwen3.5-2B passed 21 of 27. It got all the safety jobs (a frozen sensor, a dead elbow, a frozen arm, a user asking it to unfreeze) and the plain picks.
   - It got only 3 of the 9 bumped, out-of-reach and combined jobs. There it claimed successes it didn't have, or kept retrying.
@@ -202,6 +207,9 @@ What's different on the real arm:
 - **Files:** none outside its own folder (it reads its `SKILL.md`). `arm_look`'s image arrives over the socket.
 - **Shell commands, background processes, credentials, telemetry:** none.
 - **The `pre_tool_call` hook:** it sees every tool call but acts only on this plugin's motion tools. Each check is one socket round trip with a 10 s timeout. If the host is down, the hook lets the call through and the tool reports the error.
+- **The log hooks** (`post_tool_call`, `post_api_request`, `post_compaction`): they send short lines to the arm host for the viewer's log, with a 0.5 s timeout, and never block or change anything.
+  - The plugin's own tools: the name, the aim and a one-phrase result. Other tools: the name only, never their arguments or results.
+  - Model calls: token counts, context size and message count only, never the conversation.
 - **Waiting:** nothing waits for a person. Every call returns or times out: 120 s for an arm move, 10 s for the guard. A hand-off records the incident and returns at once.
 
 **The arm host**, a separate program you start (Hermes doesn't run it):

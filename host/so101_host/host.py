@@ -10,6 +10,7 @@ follower takes seconds to start, so the real arm also wants exactly one long-liv
     {"op": "handoff", "id": "inc-1", "reason": ...}          a person takes an open incident
     {"op": "freeze", "by": ...} / {"op": "unfreeze", "by": ...}   the operator's kill switch
     {"op": "inject", "fault": "us_frozen"} / {"op": "clear"}  plant or clear a fault (sim only, demos)
+    {"op": "note", "lane": "agent" | "memory" | "context", "text": ...}   a line for the viewer's log
 
 The watchdog is plain code (`level1.py`), never a model: on each distance row and after each move it
 checks the recent data. The first critical finding opens an incident: motion halts, the arm parks, and
@@ -25,6 +26,7 @@ import os
 import socket
 import threading
 import time
+from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -370,6 +372,61 @@ def _brief(inc):
     return out
 
 
+class Board:
+    """The log beside the arm in the viewer, as short lines: what the agent did (its tool calls, the guard,
+    the watchdog) on top, and how Hermes is using its context window below. The plugin sends its lines with
+    the `note` op; the host adds its own (faults, parks, the freeze). `show` redraws the viewer's overlay."""
+
+    def __init__(self, show=None, keep=14):
+        self.agent = deque(maxlen=keep)
+        self.memory = deque(maxlen=6)
+        self.context = "no model call yet"
+        self.show = show
+
+    def add(self, lane, text):
+        text = str(text).encode("ascii", "replace").decode()[:84]      # the viewer's font is ASCII only
+        if lane == "context":
+            self.context = text
+        else:
+            (self.memory if lane == "memory" else self.agent).append((datetime.now().strftime("%H:%M:%S"), text))
+        if self.show:
+            self.show(self.texts())
+
+    def texts(self):
+        """Two blocks for the viewer's overlay: (left column, right column) each."""
+        agent = (["HERMES + ARM"] + [t for t, _ in self.agent], [""] + [s for _, s in self.agent])
+        memory = (["CONTEXT", "now"] + [t for t, _ in self.memory], ["", self.context] + [s for _, s in self.memory])
+        return [("\n".join(agent[0]), "\n".join(agent[1])), ("\n".join(memory[0]), "\n".join(memory[1]))]
+
+
+def _board_line(req, reply):
+    """The host's own line for the log, for what the agent's tool calls don't show."""
+    op = req.get("op")
+    if reply.get("incident"):
+        inc = reply["incident"]
+        return f"WATCHDOG parked the arm: {inc.get('kind')} - {inc.get('summary', '')}"
+    if op == "inject" and reply.get("ok"):
+        return f"fault planted: {req.get('fault')} {req.get('params') or ''}".strip()
+    if op == "clear":
+        return "faults cleared"
+    if op == "freeze":
+        return f"FROZEN by {req.get('by') or 'operator'}: every move refused"
+    if op == "unfreeze":
+        return f"unfrozen by {req.get('by') or 'operator'}"
+    return None
+
+
+def _overlay(viewer):
+    """Draw the board on the right of the viewer's 3D view: the agent's log at the top, the context below."""
+    import mujoco
+
+    def show(blocks):
+        (a1, a2), (m1, m2) = blocks
+        viewer.set_texts([(mujoco.mjtFont.mjFONT_NORMAL, mujoco.mjtGridPos.mjGRID_TOPRIGHT, a1, a2),
+                          (mujoco.mjtFont.mjFONT_NORMAL, mujoco.mjtGridPos.mjGRID_BOTTOMRIGHT, m1, m2)])
+    return show
+
+
 def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
     """arm_kind="sim": the MuJoCo SO-101 with a simulated wrist ultrasonic and plantable faults.
     arm_kind="real": a real SO-101 through LeRobot ($SO101_PORT, $SO101_ID), with taught poses."""
@@ -397,8 +454,12 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
     viewer = None
     if view and arm_kind == "sim":
         import mujoco.viewer
-        viewer = mujoco.viewer.launch_passive(arm.m, arm.d)
+        # the right-hand panel (joint sliders; Shift+Tab shows it) gives way to the log beside the arm (Board)
+        viewer = mujoco.viewer.launch_passive(arm.m, arm.d, show_right_ui=False)
         arm.hooks.append(lambda a: viewer.sync())
+    board = Board(show=_overlay(viewer) if viewer else None)
+    if viewer:
+        board.add("agent", "waiting for Hermes")
     if (view or realtime) and arm_kind == "sim":
         clock = {"wall": time.monotonic(), "sim": arm.t}
 
@@ -545,6 +606,9 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
         if op == "clear":
             arm.clear(req.get("fault"))
             return {"ok": True}
+        if op == "note":
+            board.add(req.get("lane") or "agent", req.get("text") or "")
+            return {"ok": True}
         if op == "shutdown":
             return {"ok": True, "bye": True}
         return {"ok": False, "error": f"unknown op {op!r}"}
@@ -568,10 +632,19 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
             try:
                 with conn, conn.makefile("rw", encoding="utf-8") as f:
                     for line in f:
+                        req = {}
                         try:
-                            reply = handle(json.loads(line))
+                            req = json.loads(line)
+                            reply = handle(req)
+                            said = _board_line(req, reply)
+                            if said:
+                                board.add("agent", said)
                         except Exception as exc:      # report, keep serving
                             reply = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+                        if isinstance(req, dict) and req.get("op") == "note":     # log lines skip the console
+                            f.write(json.dumps(reply) + "\n")
+                            f.flush()
+                            continue
                         print(json.dumps({"req": line.strip()[:120], "reply": reply}, default=str)[:400], flush=True)
                         f.write(json.dumps(reply, default=str) + "\n")
                         f.flush()

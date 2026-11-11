@@ -71,12 +71,16 @@ class Eye:
         top_opt.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = False
         self.r.update_scene(self.arm.d, self._camera(TOP, (x0, y0, 0.0)), top_opt)
         floor = [g for g in range(self.arm.m.ngeom) if self.arm.m.geom_bodyid[g] == 0]
+        block = mujoco.mj_name2id(self.arm.m, mujoco.mjtObj.mjOBJ_GEOM, "box")
         for i in range(self.r.scene.ngeom):                    # a plain table: no checker lines across the grid
             g = self.r.scene.geoms[i]
             if g.objtype == mujoco.mjtObj.mjOBJ_GEOM and g.objid in floor:
                 g.matid = -1
                 g.reflectance = 0.0                            # no mirror image of the grid on the floor
                 g.rgba[:] = (0.16, 0.20, 0.28, 1.0)
+            elif g.objtype == mujoco.mjtObj.mjOBJ_GEOM and g.objid == block:
+                g.rgba[:] = (0.0, 1.0, 0.0, 1.0)               # the map's block is green, whatever the bench's
+                #                                                look: _find_block measures its lit top face
         z = BLOCK_TOP + 0.0008      # the grid lies in the plane of the block's top face: no parallax when reading it
         for k in range(-6, 7):                                  # a 10 mm grid, +-60 mm around the taught spot
             strong = k % 5 == 0

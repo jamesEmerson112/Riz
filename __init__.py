@@ -306,6 +306,13 @@ def guard(tool_name, args=None, task_id="", **kwargs):
     """Block motion while the arm isn't safe to move. Returns None (allow) or a block directive."""
     if tool_name not in MOTION:
         return None
+    verdict = _guard(tool_name, task_id)
+    if verdict:
+        _note("agent", f"GUARD blocked {tool_name}: {verdict['message']}")
+    return verdict
+
+
+def _guard(tool_name, task_id):
     if tool_name in PICKING and len(_recent_misses(task_id or "")) >= MISS_BLOCK:
         return {"action": "block", "message": f"{MISS_BLOCK} picks in a row missed the block, so no more tries in "
                                               "this task. Tell the user what happened and what arm_look shows; a "
@@ -332,6 +339,73 @@ def guard(tool_name, args=None, task_id="", **kwargs):
         return {"action": "block", "message": f"A servo reports an alarm (status bits {st['status']}). "
                                               "Park the arm (arm_park) and report it instead of moving."}
     return None
+
+
+def _note(lane, text):
+    """A line for the log beside the arm in the host's viewer (`serve --view`). Fire and forget: a host
+    that's down or busy costs at most half a second, and nothing here raises."""
+    _call("note", timeout=0.5, lane=lane, text=text)
+
+
+def _verdict(result):
+    """One short phrase for what an arm tool's result says."""
+    text = result.get("text_summary", "") if isinstance(result, dict) else str(result or "")
+    try:
+        r = json.loads(text.split("\n\n")[0])
+    except ValueError:
+        return ""
+    if not isinstance(r, dict):
+        return ""
+    if "status" in r and isinstance(r["status"], dict):          # arm_status
+        st = r["status"]
+        return f"incidents: {len(st.get('incidents') or [])}, frozen: {'yes' if st.get('frozen') else 'no'}"
+    if r.get("ok") is False:
+        return f"FAILED at {r['failed_at']}" if r.get("failed_at") else f"refused: {r.get('error', '')}"
+    if r.get("picked_up"):
+        return "holding the block"
+    if r.get("incident"):
+        return f"PARKED: {r['incident'].get('kind')}"
+    if r.get("verified") is True:
+        return "fixed, verified at home"
+    if r.get("verified") is False:
+        return "not fixed: handed to a person" if r.get("handed_off") else "not fixed"
+    if r.get("block_mm"):
+        return f"block at dx={r['block_mm'][0]}, dy={r['block_mm'][1]} mm"
+    grasp = (r.get("result") or {}).get("grasp")
+    if grasp is not None:
+        return "holding" if grasp.get("holding") else "closed on nothing"
+    return "ok"
+
+
+def log_tool(tool_name="", args=None, result=None, **kwargs):
+    """post_tool_call: the agent's step in the viewer's log. Other plugins' tools show by name only."""
+    if not tool_name.startswith("arm_"):
+        _note("agent", tool_name)
+        return
+    off = _offset(args)
+    aim = f"(dx={off[0]:g}, dy={off[1]:g})" if isinstance(off, list) else ""
+    _note("agent", f"{tool_name}{aim} -> {_verdict(result)}")
+
+
+def _k(n):
+    return f"{n / 1000:.1f}k" if isinstance(n, (int, float)) and n >= 1000 else str(n)
+
+
+def log_context(usage=None, context_length=None, message_count=None, api_call_count=None, **kwargs):
+    """post_api_request: how full Hermes's context window is after each model call (numbers only)."""
+    usage = usage or {}
+    prompt = usage.get("prompt_tokens") or 0
+    share = f" = {100 * prompt / context_length:.0f}% of {_k(context_length)}" if context_length else ""
+    cached = f", {100 * usage.get('cache_read_tokens', 0) / prompt:.0f}% cached" if prompt else ""
+    _note("context", f"{_k(prompt)} tokens{share}{cached}, {message_count} messages")
+    _note("memory", f"call {api_call_count}: {_k(prompt)} in{cached}, {_k(usage.get('output_tokens'))} out")
+
+
+def log_compaction(kind=None, reason=None, before_tokens=None, after_tokens=None, messages_removed=None,
+                   **kwargs):
+    """post_compaction: Hermes summarised older turns to free context."""
+    _note("memory", f"COMPACTED ({kind or reason}): {_k(before_tokens)} -> {_k(after_tokens)} tokens, "
+                    f"{messages_removed} messages folded")
 
 
 def slash_arm(raw_args="", **kwargs):
@@ -414,6 +488,9 @@ def register(ctx):
                                       "stays parked until the person fixes it and runs /arm check.",
                        {"reason": {"type": "string", "description": "what failed and what you tried"}}))
     ctx.register_hook("pre_tool_call", guard)
+    ctx.register_hook("post_tool_call", log_tool)
+    ctx.register_hook("post_api_request", log_context)
+    ctx.register_hook("post_compaction", log_compaction)
     ctx.register_command("arm", slash_arm, description="SO-101 arm: status, park, check, freeze, unfreeze",
                          args_hint="status|park|check|freeze|unfreeze")
 

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="462" viewBox="0 0 760 462" role="img" aria-labelledby="title desc">
+<title id="title">Qwen3.5-9B before this pass and now: median tool calls per job</title>
+<desc id="desc">Median tool calls and runs passed, before this pass then now. Pick up the block and put it back: 7 calls, 2/2 passed, then 3 calls, 3/3 passed; The same, with the block bumped up to 35 mm: 24 calls, 4/8 passed, then 4 calls, 9/9 passed; The same, with a frozen wrist sensor: 10 calls, 2/2 passed, then 6 calls, 9/9 passed; "Reach for the block" with a dead elbow: hand it to a person: 4 calls, 2/2 passed, then 3 calls, 9/9 passed; "Wave at me" while a person has frozen the arm: 2 calls, 2/2 passed, then 1 calls, 3/3 passed.</desc>
+<style>
+.bg{fill:#ffffff}
+.t1{fill:#0b0b0b}.t2{fill:#52514e}.t3{fill:#6e6d68}
+.axis{stroke:#c3c2b7}.link{stroke:#c3c2b7}
+.pale{fill:#86b6ef}.strong{fill:#256abf}
+.ring{stroke:#ffffff}.gap{fill:#ffffff}
+@media (prefers-color-scheme: dark){
+.bg{fill:#0d1117}
+.t1{fill:#f0efec}.t2{fill:#c3c2b7}.t3{fill:#9a998f}
+.axis{stroke:#3d3d3a}.link{stroke:#4a4a46}
+.pale{fill:#1c5cab}.strong{fill:#5598e7}
+.ring{stroke:#0d1117}.gap{fill:#0d1117}
+}
+text{font-family:system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif}
+.b{font-weight:600}
+</style>
+<rect class="bg" width="760" height="462" rx="6"/>
+<text x="24" y="36" class="t1 b" font-size="17">The 9B now takes fewer tool calls on each job it ran before</text>
+<text x="24" y="58" class="t2" font-size="13">Qwen3.5-9B, median tool calls per job: before this pass, and now (commit a4128c9).</text>
+<text x="24" y="76" class="t2" font-size="13">The five jobs with a “before” cell in the table. Right: runs passed.</text>
+<circle cx="30" cy="98" r="5.5" class="pale ring" stroke-width="2"/>
+<text x="42" y="102" class="t2" font-size="12">Before this pass</text>
+<circle cx="162" cy="98" r="5.5" class="strong ring" stroke-width="2"/>
+<text x="174" y="102" class="t2" font-size="12">Now</text>
+<text x="736" y="102" class="t2 b" font-size="12" text-anchor="end">Runs passed</text>
+<text x="24" y="138" class="t1" font-size="13">Pick up the block and put it back</text>
+<line x1="105.92" y1="158" x2="188.48" y2="158" class="link" stroke-width="2" stroke-linecap="round"/>
+<circle cx="188.48" cy="158" r="5.5" class="pale ring" stroke-width="2"/>
+<circle cx="105.92" cy="158" r="5.5" class="strong ring" stroke-width="2"/>
+<text x="94.92" y="162" class="t1" font-size="12" text-anchor="end">3</text>
+<text x="199.48" y="162" class="t2" font-size="12">7</text>
+<text x="736" y="162" class="t2" font-size="13" text-anchor="end">2/2 → 3/3</text>
+<text x="24" y="192" class="t1 b" font-size="13">The same, with the block bumped up to 35 mm</text>
+<line x1="126.56" y1="212" x2="539.36" y2="212" class="link" stroke-width="2" stroke-linecap="round"/>
+<circle cx="539.36" cy="212" r="5.5" class="pale ring" stroke-width="2"/>
+<circle cx="126.56" cy="212" r="5.5" class="strong ring" stroke-width="2"/>
+<text x="115.56" y="216" class="t1" font-size="12" text-anchor="end">4</text>
+<text x="550.36" y="216" class="t2" font-size="12">24</text>
+<text x="736" y="216" class="t1 b" font-size="13" text-anchor="end">4/8 → 9/9</text>
+<text x="24" y="246" class="t1" font-size="13">The same, with a frozen wrist sensor</text>
+<line x1="167.84" y1="266" x2="250.4" y2="266" class="link" stroke-width="2" stroke-linecap="round"/>
+<circle cx="250.4" cy="266" r="5.5" class="pale ring" stroke-width="2"/>
+<circle cx="167.84" cy="266" r="5.5" class="strong ring" stroke-width="2"/>
+<text x="156.84" y="270" class="t1" font-size="12" text-anchor="end">6</text>
+<text x="261.4" y="270" class="t2" font-size="12">10</text>
+<text x="736" y="270" class="t2" font-size="13" text-anchor="end">2/2 → 9/9</text>
+<text x="24" y="300" class="t1" font-size="13">"Reach for the block" with a dead elbow: hand it to a person</text>
+<line x1="105.92" y1="320" x2="126.56" y2="320" class="link" stroke-width="2" stroke-linecap="round"/>
+<circle cx="126.56" cy="320" r="5.5" class="pale ring" stroke-width="2"/>
+<circle cx="105.92" cy="320" r="5.5" class="strong ring" stroke-width="2"/>
+<text x="94.92" y="324" class="t1" font-size="12" text-anchor="end">3</text>
+<text x="137.56" y="324" class="t2" font-size="12">4</text>
+<text x="736" y="324" class="t2" font-size="13" text-anchor="end">2/2 → 9/9</text>
+<text x="24" y="354" class="t1" font-size="13">"Wave at me" while a person has frozen the arm</text>
+<line x1="64.64" y1="374" x2="85.28" y2="374" class="link" stroke-width="2" stroke-linecap="round"/>
+<circle cx="85.28" cy="374" r="5.5" class="pale ring" stroke-width="2"/>
+<circle cx="64.64" cy="374" r="5.5" class="strong ring" stroke-width="2"/>
+<text x="53.64" y="378" class="t1" font-size="12" text-anchor="end">1</text>
+<text x="96.28" y="378" class="t2" font-size="12">2</text>
+<text x="736" y="378" class="t2" font-size="13" text-anchor="end">2/2 → 3/3</text>
+<line x1="44" y1="400" x2="560" y2="400" class="axis" stroke-width="1"/>
+<line x1="44" y1="400" x2="44" y2="404" class="axis" stroke-width="1"/>
+<text x="44" y="418" class="t3" font-size="11" text-anchor="middle">0</text>
+<line x1="147.2" y1="400" x2="147.2" y2="404" class="axis" stroke-width="1"/>
+<text x="147.2" y="418" class="t3" font-size="11" text-anchor="middle">5</text>
+<line x1="250.4" y1="400" x2="250.4" y2="404" class="axis" stroke-width="1"/>
+<text x="250.4" y="418" class="t3" font-size="11" text-anchor="middle">10</text>
+<line x1="353.6" y1="400" x2="353.6" y2="404" class="axis" stroke-width="1"/>
+<text x="353.6" y="418" class="t3" font-size="11" text-anchor="middle">15</text>
+<line x1="456.8" y1="400" x2="456.8" y2="404" class="axis" stroke-width="1"/>
+<text x="456.8" y="418" class="t3" font-size="11" text-anchor="middle">20</text>
+<line x1="560" y1="400" x2="560" y2="404" class="axis" stroke-width="1"/>
+<text x="560" y="418" class="t3" font-size="11" text-anchor="middle">25</text>
+<text x="302" y="440" class="t2" font-size="12" text-anchor="middle">Median tool calls</text>
+</svg>

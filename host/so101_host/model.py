@@ -42,6 +42,29 @@ def _body(spec, name):
     return body
 
 
+INK, PAPER = 0.08, 0.96        # the bench's look: black and white
+
+
+def _black_and_white(spec):
+    """A light, black-and-white bench: a white arm with black servos, a black block, a pale checker table
+    and a white sky. Looks only; the camera's map repaints the block for its own measurement."""
+    for mat in spec.materials:
+        r, g, b, a = mat.rgba
+        shade = PAPER if 0.3 * r + 0.59 * g + 0.11 * b > 0.4 else INK
+        mat.rgba = [shade, shade, shade, a]
+        if mat.name == "groundplane":
+            mat.reflectance = 0.0
+    for tex in spec.textures:
+        if tex.type == mujoco.mjtTexture.mjTEXTURE_SKYBOX:
+            tex.rgb1, tex.rgb2 = [1.0, 1.0, 1.0], [0.85, 0.85, 0.85]
+        elif tex.name == "groundplane":
+            tex.rgb1, tex.rgb2, tex.markrgb = [0.95, 0.95, 0.95], [0.72, 0.72, 0.72], [0.55, 0.55, 0.55]
+    spec.visual.rgba.haze = [1.0, 1.0, 1.0, 1.0]
+    spec.visual.rgba.rangefinder = [INK, INK, INK, 1.0]
+    finder = getattr(spec, "geom", None) or getattr(spec, "find_geom")
+    finder("box").rgba = [INK, INK, INK, 1.0]
+
+
 def build(block_pos=BLOCK_POS) -> mujoco.MjModel:
     if not (MENAGERIE / "scene_box.xml").exists():
         raise FileNotFoundError(f"{MENAGERIE} is missing; run: python -m so101_host fetch-model")
@@ -51,9 +74,10 @@ def build(block_pos=BLOCK_POS) -> mujoco.MjModel:
     finder("box").size = list(BLOCK_HALF)
     for key in list(spec.keys):          # Menagerie's "pickup" keyframe expects the old box
         spec.delete(key)
+    _black_and_white(spec)
     _body(spec, "gripper").add_site(
         name="ultrasonic", pos=list(SENSOR_POS), quat=list(SENSOR_QUAT),
-        size=[0.006, 0.006, 0.006], rgba=[0.35, 0.77, 0.87, 1.0], group=1,
+        size=[0.006, 0.006, 0.006], rgba=[INK, INK, INK, 1.0], group=1,
     )
     spec.add_sensor(
         name="ultrasonic", type=mujoco.mjtSensor.mjSENS_RANGEFINDER,

@@ -161,3 +161,19 @@ def test_unknown_skills_and_motions_are_refused(host):
     assert not host("skill", name="dance")["ok"]
     r = host("play", motion="dance")
     assert "no motion named" in r["result"]["aborted"]
+
+
+def test_the_viewer_log_keeps_the_agents_lines_and_the_context_apart(host):
+    from so101_host.host import Board, _board_line
+    shown = []
+    board = Board(show=shown.append, keep=3)
+    for i in range(5):
+        board.add("agent", f"step {i}")
+    board.add("context", "12.1k tokens = 4% of 272.0k")
+    board.add("memory", "call 7: 11.2k in, 97% cached, 27 out → ascii only")
+    (a1, a2), (m1, m2) = shown[-1]
+    assert a2.splitlines()[1:] == ["step 2", "step 3", "step 4"]          # the newest lines, oldest first
+    assert "12.1k tokens = 4% of 272.0k" in m2 and m2.isascii()
+    assert _board_line({"op": "freeze", "by": "/arm"}, {"ok": True}).startswith("FROZEN by /arm")
+    assert _board_line({"op": "status"}, {"ok": True}) is None
+    assert host("note", lane="agent", text="arm_go_home -> ok")["ok"]      # the plugin's line, over the socket
