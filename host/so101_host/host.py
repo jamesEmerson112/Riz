@@ -479,8 +479,13 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
                     from .camera import Eye
                     state["eye"] = Eye(arm, data_dir() / "frames")
                 seen = state["eye"].look(aim)
+                seen["holding"] = bool(arm.grasp_check().get("holding"))
                 far = seen.get("block_mm") and max(abs(v) for v in seen["block_mm"]) > MAX_OFFSET_MM
-                if far:                               # the camera sees it, but no correction may reach it
+                if seen["holding"]:                   # the map is a top view: a held block looks like it's down
+                    seen["to_pick_it"] = "none: the gripper is holding the block now (it is in the air)."
+                    seen["note"] = "The gripper is holding the block. arm_release sets it down where it was."
+                    seen.pop("reachable", None)
+                elif far:                             # the camera sees it, but no correction may reach it
                     seen["to_pick_it"] = ("none: the block is out of reach. Don't pick; tell the user to move it "
                                           "back near the marked spot (0, 0 on the map).")
                     seen["reachable"] = False

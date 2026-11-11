@@ -102,7 +102,10 @@ def test_look_and_correct_through_the_plugin(agent):
     seen = json.loads(text["text"].split("\n\n")[0])
     assert seen["aim_mm"] == [0.0, 0.0] and seen["block_mm"] == [30, -10]
     fix = seen["to_pick_it"]                                             # what the model is told to send
-    assert use(fix["tool"], {"dx_mm": fix["dx_mm"], "dy_mm": fix["dy_mm"]})["picked_up"]
+    picked = use(fix["tool"], {"dx_mm": fix["dx_mm"], "dy_mm": fix["dy_mm"]})
+    assert picked["picked_up"] and "arm_release" in picked["next"]
+    held = json.loads(use("arm_look")["content"][0]["text"].split("\n\n")[0])
+    assert held["holding"] and held["to_pick_it"].startswith("none")       # a held block isn't on the table
     use("arm_release")
     host("clear")
 

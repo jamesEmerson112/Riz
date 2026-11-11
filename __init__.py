@@ -145,7 +145,9 @@ def pick_up(args=None, **kwargs):
                 if measured:
                     steps.append({"step": "measure", "ok": True, "reply": measured})
             return _json({"ok": False, "picked_up": False, "failed_at": name, "steps": steps, "hint": hint})
-    return _json({"ok": True, "picked_up": True, "steps": steps})
+    return _json({"ok": True, "picked_up": True, "steps": steps,
+                  "next": "Holding the block about 30 mm up. To put it back, call arm_release: it sets the block "
+                          "down where it was picked up."})
 
 
 def _missed_block_hint():
