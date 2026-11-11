@@ -126,6 +126,7 @@ def test_a_frozen_sensor_is_blocked_then_healed_through_the_plugin(agent):
     host("inject", fault="us_frozen")
     first = use("arm_pick_up")
     assert not first["picked_up"]                                         # the watchdog parked it mid-approach
+    assert "arm_restart_sensor" in first["hint"]                           # the one repair to try, named
     blocked = use("arm_reach")
     assert "arm_restart_sensor" in blocked["blocked"]                     # the guard names the way out
     fixed = use("arm_restart_sensor")

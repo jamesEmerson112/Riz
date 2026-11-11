@@ -97,6 +97,23 @@ def _offset(args):
         return "bad"
 
 
+def _incident_next(inc):
+    """The one repair to try when the watchdog parked the arm mid-move."""
+    kind = str((inc or {}).get("kind", ""))
+    if (inc or {}).get("handed_off"):
+        return "A person has this incident: tell the user what failed and wait for their /arm check."
+    if kind.startswith("us_"):
+        return "The watchdog parked the arm on a wrist-sensor fault. Run arm_restart_sensor, then retry the task."
+    return ("The watchdog parked the arm: a joint did not reach its target. Run arm_check: it re-tests at home "
+            "and hands it to a person if it still fails. Then tell the user what it found.")
+
+
+def _with_incident_next(reply):
+    if reply.get("incident"):
+        reply["next"] = _incident_next(reply["incident"])
+    return reply
+
+
 def _skill_handler(skill):
     def handler(args=None, **kwargs):
         if skill == "approach":
@@ -104,8 +121,8 @@ def _skill_handler(skill):
             if off == "bad":
                 return _json({"ok": False, "error": "dx_mm and dy_mm must be numbers"})
             if off is not None:
-                return _json(_call("skill", name=skill, offset_mm=off))
-        return _json(_call("skill", name=skill))
+                return _json(_with_incident_next(_call("skill", name=skill, offset_mm=off)))
+        return _json(_with_incident_next(_call("skill", name=skill)))
     return handler
 
 
@@ -119,7 +136,7 @@ def play(args=None, **kwargs):
         speed = min(max(float(speed), 0.25), 1.0)
     except (TypeError, ValueError):
         speed = 1.0
-    return _json(_call("play", motion=motion, speed=speed))
+    return _json(_with_incident_next(_call("play", motion=motion, speed=speed)))
 
 
 def pick_up(args=None, **kwargs):
@@ -138,6 +155,8 @@ def pick_up(args=None, **kwargs):
         if not steps[-1]["ok"]:
             if reply.get("error"):                      # the host refused the call itself
                 hint = f"The arm host refused it: {reply['error']}. Don't retry the same call."
+            elif reply.get("incident"):
+                hint = _incident_next(reply["incident"])
             elif name == "approach":
                 hint = "The arm is parked by a fault: check arm_status and repair first."
             else:
