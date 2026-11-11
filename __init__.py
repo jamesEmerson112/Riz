@@ -28,7 +28,9 @@ from pathlib import Path
 TOOLSET = "so101_arm"
 _STATE = {"socket": None, "misses": {}}
 MISS_LIMIT = 3          # failed picks in a row (per task) before the reply says to stop and ask the user
+MISS_BLOCK = 6          # ...and before the guard refuses more picks until a person's /arm check
 MISS_FORGET_S = 600     # a miss older than this no longer counts
+PICKING = {"arm_pick_up", "arm_approach", "arm_grip"}
 
 SKILLS = {
     "arm_go_home": ("go_home", "Move the arm to its ready pose over the work area. Use it first, and to reset "
@@ -141,6 +143,11 @@ def play(args=None, **kwargs):
     except (TypeError, ValueError):
         speed = 1.0
     return _json(_with_incident_next(_call("play", motion=motion, speed=speed)))
+
+
+def _recent_misses(task_id):
+    now = time.monotonic()
+    return [t for t in _STATE["misses"].get(task_id, []) if now - t < MISS_FORGET_S]
 
 
 def _count_miss(task_id, missed):
@@ -282,6 +289,10 @@ def guard(tool_name, args=None, task_id="", **kwargs):
     """Block motion while the arm isn't safe to move. Returns None (allow) or a block directive."""
     if tool_name not in MOTION:
         return None
+    if tool_name in PICKING and len(_recent_misses(task_id or "")) >= MISS_BLOCK:
+        return {"action": "block", "message": f"{MISS_BLOCK} picks in a row missed the block, so no more tries in "
+                                              "this task. Tell the user what happened and what arm_look shows; a "
+                                              "person can check the block and type /arm check to allow picks again."}
     st = _call("status", timeout=10.0)
     if not st.get("ok"):
         return None                                   # the tool itself reports the host problem
@@ -324,6 +335,7 @@ def slash_arm(raw_args="", **kwargs):
     if cmd == "park":
         return _json(_call("skill", name="park"))
     if cmd == "check":
+        _STATE["misses"].clear()                      # a person looked: picks are allowed again
         return _json(_call("repair", action="verify"))
     if cmd in ("freeze", "unfreeze"):
         return _json(_call(cmd, by="/arm (a person in the chat)"))

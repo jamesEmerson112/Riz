@@ -188,6 +188,21 @@ def test_three_missed_picks_in_a_row_say_stop_and_ask(plugin):
     assert run(ctx, "arm_pick_up")["picked_up"]                        # a success resets the count
 
 
+def test_six_missed_picks_stop_picking_until_a_person_checks(plugin):
+    mod, ctx, host = plugin
+    guard = ctx.hooks["pre_tool_call"]
+    host.state["grasp_holding"] = False
+    for _ in range(6):
+        assert guard("arm_pick_up", {}, task_id="t7") is None
+        ctx.tools["arm_pick_up"][2]({}, task_id="t7")
+    block = guard("arm_pick_up", {}, task_id="t7")
+    assert block["action"] == "block" and "/arm check" in block["message"]
+    assert guard("arm_go_home", {}, task_id="t7") is None             # other moves (and other tasks) are fine
+    assert guard("arm_pick_up", {}, task_id="t8") is None
+    ctx.commands["arm"]("check")                                     # a person checked: picks allowed again
+    assert guard("arm_pick_up", {}, task_id="t7") is None
+
+
 def test_pick_up_stops_at_the_first_failed_step(plugin):
     mod, ctx, host = plugin
     assert run(ctx, "arm_pick_up")["picked_up"]
