@@ -94,6 +94,9 @@ class Eye:
         _line(self.r.scene, (ax, ay - 0.011, z + 0.0015), (ax, ay + 0.011, z + 0.0015), red, 5.0, glow=1.0)
         top = Image.fromarray(self.r.render()).convert("RGB")
         block_mm = self._find_block(np.asarray(top), z)
+        if block_mm is not None and "camera_noise" in self.arm.faults:   # a noisy camera: each look is off
+            sd = self.arm.faults["camera_noise"].get("mm", 4.0)
+            block_mm = [round(v + self.arm.rng.normal(0.0, sd)) for v in block_mm]
         d = ImageDraw.Draw(top, "RGBA")
         for k in range(-60, 61, 10):                            # every grid line, in the units the tools take
             px, py = self._px(x0 + k / 1000.0, y0 - 0.062, z)   # dx along the right-hand edge

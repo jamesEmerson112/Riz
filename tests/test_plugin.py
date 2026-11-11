@@ -87,8 +87,10 @@ class FakeHost:
             return reply
         if op == "rehearse":
             self.rehearsed = req
-            reply = {"ok": True, "copies": len(req["candidates"]), "held": 1, "block_mm_seen": [30, -10],
-                     "best": {"dx_mm": 30.0, "dy_mm": -10.0}, "results": []}
+            reply = {"ok": True, "copies": len(req["candidates"]) * req.get("trials", 1), "held": 3,
+                     "trials": req.get("trials", 1), "block_mm_seen": [30, -10],
+                     "best": {"dx_mm": 30.0, "dy_mm": -10.0, "held": 3, "trials": req.get("trials", 1)},
+                     "results": []}
             if req.get("inline"):
                 reply["sheet_png_b64"] = "iVBORw0KGgo="
             return reply
@@ -286,11 +288,16 @@ def test_the_viewer_log_gets_tool_steps_guard_blocks_and_context_numbers(plugin)
 def test_rehearse_sends_the_aims_and_hands_back_the_copies_and_the_best_aim(plugin):
     mod, ctx, host = plugin
     rehearse = ctx.tools["arm_rehearse"][2]
-    out = rehearse({"candidates": [{"dx_mm": 0, "dy_mm": 0}, {"dx_mm": 30, "dy_mm": -10}]}, task_id="t1")
+    out = rehearse({"candidates": [{"dx_mm": 0, "dy_mm": 0}, {"dx_mm": 30, "dy_mm": -10}], "trials": 3},
+                   task_id="t1")
     assert host.rehearsed["candidates"] == [[0.0, 0.0], [30.0, -10.0]] and host.rehearsed["inline"]
+    assert host.rehearsed["trials"] == 3
     assert out["_multimodal"] and out["content"][1]["image_url"]["url"].startswith("data:image/png;base64,")
     said = json.loads(out["text_summary"])
+    assert "held on 3 of its 3 copies" in said["next"]
     assert said["next"].endswith("arm_pick_up with dx_mm=30 and dy_mm=-10.")
+    rehearse({"candidates": []}, task_id="t1")
+    assert "trials" not in host.rehearsed                         # the host picks the default
     assert "arm_rehearse" not in mod.MOTION                       # the main arm doesn't move: no guard
     assert not json.loads(rehearse({"candidates": [{"dx_mm": "far"}]}))["ok"]
     assert not json.loads(rehearse({"candidates": "everywhere"}))["ok"]

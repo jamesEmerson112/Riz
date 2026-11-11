@@ -1,10 +1,12 @@
 """python -m so101_host <command>
 
-  serve [--real] [--gif] [--view] [--realtime]   run the arm host (default: the MuJoCo sim)
+  serve [--real] [--gif] [--video] [--view] [--realtime]
+                                                  run the arm host (default: the MuJoCo sim)
   status                                          ask the running host how the arm is
   fault <name> [key=value ...]                    sim: plant a fault for a demo (us_frozen, us_scale
                                                   factor=0.5, us_offset mm=40, us_noisy us=30,
-                                                  joint_stuck joint=2, joint_offset joint=1 deg=15)
+                                                  joint_stuck joint=2, joint_offset joint=1 deg=15,
+                                                  joint_noise deg=1.5, camera_noise mm=4)
   clear [<name>]                                  sim: clear planted faults
   freeze [--by NAME] / unfreeze [--by NAME]       the operator's kill switch: freeze parks the arm and
                                                   refuses every move until a person unfreezes it

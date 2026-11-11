@@ -382,7 +382,7 @@ class Board:
         self.agent = deque(maxlen=keep)
         self.memory = deque(maxlen=6)
         self.context = "no model call yet"
-        self.show = show
+        self.show, self.lane = show, None
 
     def add(self, lane, text):
         text = str(text).encode("ascii", "replace").decode()[:84]      # the viewer's font is ASCII only
@@ -390,6 +390,7 @@ class Board:
             self.context = text
         else:
             (self.memory if lane == "memory" else self.agent).append((datetime.now().strftime("%H:%M:%S"), text))
+        self.lane = lane
         if self.show:
             self.show(self.texts())
 
@@ -408,8 +409,9 @@ def _board_line(req, reply):
         return f"WATCHDOG parked the arm: {inc.get('kind')} - {inc.get('summary', '')}"
     if op == "rehearse" and reply.get("ok"):
         best = reply.get("best")
-        return (f"REHEARSED on {reply['copies']} sim copies: {reply['held']} held; best aim "
-                + (f"({best['dx_mm']:g}, {best['dy_mm']:g})" if best else "none"))
+        return (f"REHEARSED {len(reply['results'])} aims x {reply['trials']} on {reply['copies']} sim copies: "
+                + (f"best ({best['dx_mm']:g}, {best['dy_mm']:g}) held {best['held']}/{best['trials']}"
+                   if best else "none held"))
     if op == "inject" and reply.get("ok"):
         return f"fault planted: {req.get('fault')} {req.get('params') or ''}".strip()
     if op == "clear":
@@ -432,49 +434,7 @@ def _overlay(viewer):
     return show
 
 
-def _copies_on_view(viewer, *, gap=0.45, fps=25, step=3, linger=2.0):
-    """Replay a rehearsal's copies in the viewer: every copy at once, as an extra arm in a grid behind the
-    main one, at about 1.7x speed; at the end the copies that missed turn red. Looks only: the copies have
-    already run, and this draws their recorded poses into the viewer's own scene."""
-    import mujoco
-
-    def show(model, paths, held):
-        cols = 3 if len(paths) > 4 else 2
-        offsets = [(-gap * (1 + i // cols), gap * (i % cols - (cols - 1) / 2), 0.0) for i in range(len(paths))]
-        d, opt, pert = mujoco.MjData(model), mujoco.MjvOption(), mujoco.MjvPerturb()
-        cam = viewer.cam
-        saved = (cam.lookat.copy(), cam.distance, cam.azimuth, cam.elevation)
-        rows = -(-len(paths) // cols)
-        cam.lookat[:] = [-gap * (rows + 1) / 2, 0.0, 0.1]
-        cam.distance, cam.azimuth, cam.elevation = 0.9 + 0.45 * rows, 200.0, -32.0
-        frames = max(len(p) for p in paths)
-        for f in list(range(0, frames, step)) + [frames - 1] * int(linger * fps):
-            last = f == frames - 1
-            with viewer.lock():
-                scn = viewer.user_scn
-                scn.ngeom = 0
-                for path, (ox, oy, oz), ok in zip(paths, offsets, held):
-                    d.qpos[:] = path[min(f, len(path) - 1)]
-                    mujoco.mj_forward(model, d)
-                    first = scn.ngeom
-                    mujoco.mjv_addGeoms(model, d, opt, pert, mujoco.mjtCatBit.mjCAT_ALL, scn)
-                    for g in range(first, scn.ngeom):
-                        geom = scn.geoms[g]
-                        if geom.objtype == mujoco.mjtObj.mjOBJ_GEOM and model.geom_bodyid[geom.objid] == 0:
-                            geom.rgba[3] = 0.0                # the copy's own floor: the main one shows
-                        geom.pos[:] = geom.pos + (ox, oy, oz)
-                        if last and not ok:
-                            geom.rgba[:3] = (0.9, 0.15, 0.15)
-            viewer.sync()
-            time.sleep(1.0 / fps)
-        with viewer.lock():
-            viewer.user_scn.ngeom = 0
-        cam.lookat[:], cam.distance, cam.azimuth, cam.elevation = saved
-        viewer.sync()
-    return show
-
-
-def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
+def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None, video=False):
     """arm_kind="sim": the MuJoCo SO-101 with a simulated wrist ultrasonic and plantable faults.
     arm_kind="real": a real SO-101 through LeRobot ($SO101_PORT, $SO101_ID), with taught poses."""
     sock = Path(sock or SOCK)
@@ -504,8 +464,23 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
         # the right-hand panel (joint sliders; Shift+Tab shows it) gives way to the log beside the arm (Board)
         viewer = mujoco.viewer.launch_passive(arm.m, arm.d, show_right_ui=False)
         arm.hooks.append(lambda a: viewer.sync())
-    board = Board(show=_overlay(viewer) if viewer else None)
-    if viewer:
+    from .stage import Stage
+    stage = Stage(viewer)                         # rehearsal copies, live on the viewer and in the video
+    overlay = _overlay(viewer) if viewer else None
+    film = None
+
+    def on_board(blocks):
+        if overlay:
+            overlay(blocks)
+        if film and board.lane != "context":     # a new log line shows for half a second
+            film.frame(hold=12)
+    board = Board(show=on_board)
+    if video and arm_kind == "sim":
+        from .render import Video
+        film = Video(arm, runs / f"{rec.run_id}.mp4", board=board, stage=stage)
+        arm.hooks.append(film)
+        print(f"filming to {film.path}", flush=True)
+    if viewer or film:
         board.add("agent", "waiting for Hermes")
     if (view or realtime) and arm_kind == "sim":
         clock = {"wall": time.monotonic(), "sim": arm.t}
@@ -629,17 +604,30 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
             if max(abs(v) for v in seen["block_mm"]) > MAX_OFFSET_MM:
                 return {"ok": False, "error": f"the block is seen at {seen['block_mm']}, past the {MAX_OFFSET_MM:g} mm the "
                                               "arm may correct: tell the user to move it back near the marked spot"}
-            from .rehearse import MAX_COPIES, around, rehearse
+            from .rehearse import MAX_AIMS, MAX_COPIES, MAX_TRIALS, around, cross, noise_levels, rehearse
+            noise = noise_levels(arm.faults)
             aims = []
-            for c in req.get("candidates") or around(seen["block_mm"]):
+            for c in req.get("candidates") or (cross if noise else around)(seen["block_mm"]):
                 aim, why = check_offset(c)
                 if why:
                     return {"ok": False, "error": f"candidate {c}: {why}"}
                 aims.append(aim)
-            if len(aims) > MAX_COPIES:
-                return {"ok": False, "error": f"at most {MAX_COPIES} candidates at a time"}
-            return {"ok": True, **rehearse(seen["block_mm"], aims, picture=bool(req.get("inline")),
-                                           show=_copies_on_view(viewer) if viewer else None)}
+            if len(aims) > MAX_AIMS:
+                return {"ok": False, "error": f"at most {MAX_AIMS} candidates at a time"}
+            try:
+                trials = int(req.get("trials") or (3 if noise else 1))
+            except (TypeError, ValueError):
+                return {"ok": False, "error": "trials must be a whole number, 1 to 4"}
+            if not 1 <= trials <= MAX_TRIALS:
+                return {"ok": False, "error": f"trials must be 1 to {MAX_TRIALS}"}
+            if len(aims) * trials > MAX_COPIES:
+                if req.get("trials"):
+                    return {"ok": False, "error": f"at most {MAX_COPIES} copies: candidates x trials"}
+                trials = max(1, MAX_COPIES // len(aims))
+            stage.clear()
+            return {"ok": True, **rehearse(seen["block_mm"], aims, trials=trials, noise=noise,
+                                           picture=bool(req.get("inline")), stage=stage, video=film,
+                                           fps=arm.fps)}
         if op == "read":
             return {"ok": True, "pos": arm.read()}
         if op == "distance":
@@ -671,12 +659,14 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
                 return {"ok": False, "error": "faults are planted in the sim only"}
             fault = req.get("fault")
             known = ("us_frozen", "us_offset", "us_scale", "us_noisy", "joint_stuck", "joint_offset",
-                     "joint_reversed", "block_shift")
+                     "joint_reversed", "block_shift", "joint_noise", "camera_noise")
             if fault not in known:
                 return {"ok": False, "error": f"unknown fault {fault!r}; known: {list(known)}"}
+            stage.clear()                             # a new job: the last rehearsal's copies go
             return {"ok": True, "fault": arm.inject(fault, **req.get("params", {}))}
         if op == "clear":
             arm.clear(req.get("fault"))
+            stage.clear()
             return {"ok": True}
         if op == "note":
             board.add(req.get("lane") or "agent", req.get("text") or "")
@@ -738,6 +728,8 @@ def serve(*, arm_kind="sim", gif=False, view=False, realtime=False, sock=None):
                 pass
         if gif:
             print("gif:", gif.save(), flush=True)
+        if film:
+            print("video:", film.close(), flush=True)
         if viewer:
             viewer.close()
 
@@ -746,11 +738,14 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Run the SO-101 arm host (sim or real).")
     ap.add_argument("--real", action="store_true", help="drive a real SO-101 through LeRobot ($SO101_PORT, $SO101_ID)")
     ap.add_argument("--gif", action="store_true", help="sim: save a GIF of the session next to the run record")
+    ap.add_argument("--video", action="store_true", help="sim: save an MP4 of the session with the Hermes log "
+                                                         "beside the arm, next to the run record (needs ffmpeg)")
     ap.add_argument("--view", action="store_true", help="sim: open MuJoCo's viewer (on macOS, run with mjpython)")
     ap.add_argument("--realtime", action="store_true", help="sim: pace to wall-clock time")
     ap.add_argument("--sock", default=None, help="socket path (default $SO101_SOCK or <temp>/so101-arm.sock)")
     a = ap.parse_args(argv)
-    serve(arm_kind="real" if a.real else "sim", gif=a.gif, view=a.view, realtime=a.realtime, sock=a.sock)
+    serve(arm_kind="real" if a.real else "sim", gif=a.gif, view=a.view, realtime=a.realtime, sock=a.sock,
+          video=a.video)
 
 
 if __name__ == "__main__":

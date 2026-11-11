@@ -34,6 +34,8 @@ It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with
   - After a miss, `arm_rehearse` tries up to 16 candidate aims on simulated copies of the arm. Each copy is a fresh sim with the block where the camera saw it, never where the sim really has it, so the copies know only what the arm saw.
   - Each copy runs the same pick (approach, grip, lift) and reports held or missed. The result names the best aim (the one that held nearest where the block was seen) and shows every copy in one image.
   - The agent then sends that aim to the main arm, which never moves during a rehearsal. A copy's pick takes about 0.15 s of CPU, so 16 copies take about 3 s on a laptop.
+  - When the arm is noisy (in the sim, `joint_noise` and `camera_noise`), the copies get the same noise levels, never its actual draws, and each aim is tried several times. The result is a hit rate per aim, and the best aim is the most reliable one.
+  - With `serve --view`, the copies run live in a grid behind the arm, one column per aim and one row per try; the ones that missed turn red and stay up until the next job.
 - **Heals.**
   - A watchdog in plain code checks every reading: a frozen or stuck distance sensor, a distance that disagrees with the arm's pose, a joint that stalls, a servo alarm.
   - On a fault it parks the arm and opens an incident.
@@ -82,6 +84,8 @@ uv pip install --python .venv/bin/python -e './host[sim]'
 ```
 The right side of the viewer then shows what the agent is doing: each tool call and its result, the guard's blocks and the watchdog's parks, and below them how full Hermes's context window is after each model call.
 
+Add `--video` to also film the session: an MP4 of the arm, any rehearsal copies and that log, next to the run record in `~/.so101-arm/runs/`. It needs `ffmpeg`. Only motion and new log lines are filmed, so the seconds spent waiting on the model drop out.
+
 ### Things to try
 
 Plant a fault from another terminal, then give the agent a job. Between tries, run `.venv/bin/python -m so101_host clear`: it lifts every planted fault and puts a bumped block back. Without it, a try carries over the last one's faults; a block left shifted, for one, makes the next pick miss.
@@ -92,6 +96,7 @@ Plant a fault from another terminal, then give the agent a job. Between tries, r
 | `.venv/bin/python -m so101_host fault us_frozen` | "Pick up the block, then put it back." | The watchdog parks the arm mid-approach. The agent restarts the sensor, the fix is verified at home, and the pick finishes. |
 | `.venv/bin/python -m so101_host fault joint_stuck joint=2` | "Reach for the block." | The elbow stalls and the arm parks. `arm_check` fails again, so the incident goes to you. Run `.venv/bin/python -m so101_host clear`, then `/arm check` in the chat. |
 | `/arm freeze` in the chat | "Wave at me." | The guard refuses and the agent tells you why. Only `/arm unfreeze` lets it move again. |
+| `fault block_shift dx_mm=-25 dy_mm=20`, then `fault camera_noise mm=4` and `fault joint_noise deg=1.5` | "Pick up the block, then put it back." | The camera's measurement and every move are a little off, so one aim can hold one time and miss the next. After a miss the agent rehearses: copies try each aim three times under the same noise, and the most reliable aim goes to the arm. |
 
 `/arm status` shows the arm, its incidents and whether it's frozen. `.venv/bin/python -m so101_host status` shows the same from a terminal.
 
@@ -109,7 +114,7 @@ Plant a fault from another terminal, then give the agent a job. Between tries, r
 | `arm_play` | Plays a taught motion at 0.25–1.0 of its recorded speed, never faster | yes |
 | `arm_park` | Folds the arm to rest and turns torque off. Always allowed | to rest |
 | `arm_look` | Top-down table map with the grid, the aim and the jaws, plus a side view (sim), and `block_mm`/`to_pick_it` measured on it. `dx_mm`/`dy_mm` preview an aim | no |
-| `arm_rehearse` | Tries up to 16 candidate aims on simulated copies built from what the camera saw; returns held or missed for each, the best aim, and an image of every copy (sim) | no (copies only) |
+| `arm_rehearse` | Tries up to 16 candidate aims on simulated copies built from what the camera saw, several times each when the arm is noisy (`trials`, at most 24 copies); returns the hit rate per aim, the best aim, and an image of every copy (sim) | no (copies only) |
 | `arm_status` | Incidents, servo alarms, grasp, joints, the distance sensor, the freeze, the taught motions | no |
 | `arm_restart_sensor` | Repair: restarts the wrist sensor, then the watchdog re-checks at home | to home |
 | `arm_check` | Re-checks at home without a fix; a joint that still fails goes to a person | to home |
@@ -179,9 +184,9 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   - Setup: a frontier vision model got only four top views from before the plain-code measurement, each with the block moved by an amount it wasn't told. It ran no code.
   - It read all four offsets to the millimetre: (22, 14), (−18, −27), (33, 6) and (−8, 31) mm. The picks aimed with its readings held 4 out of 4, and without the correction they missed 4 out of 4.
 - **The aim has some slack.** With the block moved (30, −10) mm, the pick still held with an aim off by up to ±12 mm forward or back. Sideways it held from 12 mm off one way to 4 mm off the other.
-- **40 tests:**
+- **45 tests:**
   - the plugin against a fake arm host: registration matches the manifest, every tool, the guard, `/arm`, and no host at all;
-  - the arm host on the sim: the pick, a frozen sensor healed, a dead elbow handed to a person, the freeze, look-and-correct, bounded offsets, rehearsal on copies, and the viewer's log;
+  - the arm host on the sim: the pick, a frozen sensor healed, a dead elbow handed to a person, the freeze, look-and-correct, bounded offsets, rehearsal on copies, noise and hit rates, the viewer's log, and the video;
   - the real plugin against the real sim host, calling the guard and then the tool as Hermes does: look-and-correct, a frozen sensor blocked and then healed, and the freeze;
   - the real-arm driver against a mock robot.
 
@@ -219,7 +224,8 @@ What's different on the real arm:
 
 **The arm host**, a separate program you start (Hermes doesn't run it):
 - **Socket:** it listens on that Unix socket, mode 0600, so only your user can connect. Any program running as you, Hermes's terminal tool included, can send it any request, including `unfreeze`.
-- **Files:** it writes run records (`runs/*.jsonl`, plus a GIF per session with `--gif`) and camera frames (`frames/*.png`) under `~/.so101-arm/`, or `$SO101_HOME`.
+- **Files:** it writes run records (`runs/*.jsonl`, plus a GIF per session with `--gif` or an MP4 with `--video`) and camera frames (`frames/*.png`) under `~/.so101-arm/`, or `$SO101_HOME`.
+- **Programs:** with `--video` it runs `ffmpeg` to encode the MP4.
 - **Downloads:** `fetch-model` runs `git` to fetch MuJoCo Menagerie's SO-101 model (Apache-2.0) from GitHub, at a pinned commit, into `host/vendor/`.
 - **Hardware:** with `--real` it drives a physical arm over USB serial, so the agent can move real hardware.
 

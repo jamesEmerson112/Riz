@@ -267,13 +267,17 @@ def rehearse(args=None, **kwargs):
         aims = [[float(c.get("dx_mm") or 0.0), float(c.get("dy_mm") or 0.0)] for c in raw]
     except (AttributeError, TypeError, ValueError):
         return _json({"ok": False, "error": "each candidate is {dx_mm, dy_mm}, two numbers"})
-    reply = _call("rehearse", candidates=aims, inline=True)
+    trials = (args or {}).get("trials")
+    # up to 24 copies, drawn live at real-time pace when the host has a viewer: allow more than one move's 120 s
+    reply = _call("rehearse", timeout=300.0, candidates=aims, inline=True, **({"trials": trials} if trials else {}))
     png = reply.pop("sheet_png_b64", None)
     if reply.get("ok"):
         best = reply.get("best")
         if best:
-            reply = {"next": f"{reply['held']} of {reply['copies']} copies held. Now do it on the main arm: "
-                             f"arm_pick_up with dx_mm={best['dx_mm']:g} and dy_mm={best['dy_mm']:g}.", **reply}
+            rate = f"held on {best.get('held', 1)} of its {best.get('trials', 1)} copies"
+            reply = {"next": f"The best aim (dx_mm={best['dx_mm']:g}, dy_mm={best['dy_mm']:g}) {rate}. Now do it on "
+                             f"the main arm: arm_pick_up with dx_mm={best['dx_mm']:g} and dy_mm={best['dy_mm']:g}.",
+                     **reply}
         else:
             reply = {"next": f"None of the {reply['copies']} copies held. Try aims closer to block_mm_seen, or tell "
                              "the user what the copies show.", **reply}
@@ -503,13 +507,17 @@ def register(ctx):
         schema=_schema("arm_rehearse", "Rehearse before retrying (sim): try up to 16 candidate aims on simulated "
                                        "copies of the arm, built from where the camera sees the block. The main "
                                        "arm doesn't move. Each copy runs the pick (approach, grip, lift) at its "
-                                       "aim and reports held or missed; the result has the best aim and an image "
-                                       "of every copy. Use it after a missed pick: pass aims around block_mm "
-                                       "(or none, for nine around it), then arm_pick_up on the main arm with "
-                                       "the best one.",
+                                       "aim and reports held or missed. When the arm is noisy, the copies share "
+                                       "its noise and each aim is tried several times, so the best aim is the "
+                                       "most reliable one. The result has the hit rate per aim, the best aim, "
+                                       "and an image of every copy. Use it after a missed pick: pass aims around "
+                                       "block_mm (or none, to let it choose), then arm_pick_up on the main arm "
+                                       "with the best one.",
                        {"candidates": {"type": "array", "maxItems": 16, "description": "the aims to try, each "
-                                       "{dx_mm, dy_mm} within 40 mm; empty tries nine around the seen block",
-                                       "items": {"type": "object", "properties": OFFSET}}}))
+                                       "{dx_mm, dy_mm} within 40 mm; empty lets it choose around the seen block",
+                                       "items": {"type": "object", "properties": OFFSET}},
+                        "trials": {"type": "integer", "minimum": 1, "maximum": 4, "description": "copies per aim "
+                                   "(default 3 when the arm is noisy, else 1); at most 24 copies in all"}}))
     ctx.register_tool(
         name="arm_status", toolset=TOOLSET, handler=status,
         schema=_schema("arm_status", "Read the arm: open incidents (and whether a person has one), servo alarm "

@@ -161,6 +161,10 @@ class SimArm:
     def goto(self, pose, duration=1.5, *, tol_deg=2.0, settle_timeout=2.0):
         """Ease to `pose`, then confirm arrival."""
         start, goal = self.d.ctrl[self._act].copy(), self.to_ctrl(pose)
+        if "joint_noise" in self.faults:            # sloppy servos: each move lands a little off, at random
+            sd = np.deg2rad(self.faults["joint_noise"].get("deg", 1.5))
+            moving = np.abs(goal[:5] - start[:5]) > np.deg2rad(0.5)     # a joint told to hold its angle holds
+            goal[:5] = np.clip(goal[:5] + moving * self.rng.normal(0.0, sd, 5), self._lo[:5], self._hi[:5])
         self._torque(True)
         n = max(1, round(duration * self.fps))
         for i in range(1, n + 1):
@@ -295,7 +299,9 @@ class SimArm:
     def inject(self, fault, **params):
         """Plant a fault (sim only). Sensor: `us_frozen`, `us_offset` (mm), `us_scale` (factor),
         `us_noisy` (us). Joints: `joint_stuck`, `joint_offset` (deg), `joint_reversed` (joint index).
-        Scene: `block_shift` (dx_mm, dy_mm): the block is somewhere else than where the arm was taught."""
+        Scene: `block_shift` (dx_mm, dy_mm): the block is somewhere else than where the arm was taught.
+        Noise: `joint_noise` (deg): every move lands that far off at random, joint by joint; `camera_noise`
+        (mm): every camera measurement of the block is off at random (camera.py)."""
         if fault == "block_shift":
             self.shift_block(params.get("dx_mm", 30.0), params.get("dy_mm", 0.0))
         self.faults[fault] = {"at": round(self.t, 3), **params}
