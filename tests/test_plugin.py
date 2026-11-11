@@ -70,6 +70,8 @@ class FakeHost:
             res = {"arrived": True}
             if req["name"] in ("grip", "lift"):
                 res["grasp"] = {"holding": st["grasp_holding"]}
+            if req["name"] == "grip":
+                res["status"] = st.get("grip_status", [0] * 6)
             return {"ok": True, "skill": req["name"], "result": res}
         if op == "play":
             return {"ok": True, "skill": "play:" + req["motion"], "result": {"arrived": True}}
@@ -301,6 +303,23 @@ def test_rehearse_sends_the_aims_and_hands_back_the_copies_and_the_best_aim(plug
     assert "arm_rehearse" not in mod.MOTION                       # the main arm doesn't move: no guard
     assert not json.loads(rehearse({"candidates": [{"dx_mm": "far"}]}))["ok"]
     assert not json.loads(rehearse({"candidates": "everywhere"}))["ok"]
+
+
+def test_an_overload_is_parked_away_and_other_alarms_still_stop_the_arm(plugin):
+    mod, ctx, host = plugin
+    guard = ctx.hooks["pre_tool_call"]
+    host.state["status"] = [0, 32, 0, 0, 0, 0]
+    said = guard("arm_release", {}, task_id="t1")["message"]
+    assert "arm_park" in said and "clears an overload" in said
+    host.state["status"] = [0, 4, 0, 0, 0, 0]                     # any other alarm: park and report
+    assert "report it instead of moving" in guard("arm_release", {}, task_id="t1")["message"]
+    host.state["status"] = [0] * 6
+    host.state["grasp_holding"], host.state["grip_status"] = False, [0, 32, 0, 0, 0, 0]
+    out = run(ctx, "arm_pick_up")
+    assert out["failed_at"] == "grip" and out["hint"].startswith("A servo overloaded")
+    assert not any(r["op"] == "look" for r in host.log)          # no missed-block look: park comes first
+    out = json.loads(ctx.tools["arm_grip"][2]({}, task_id="t2"))
+    assert out["next"].startswith("A servo overloaded")
 
 
 def test_handoff_needs_an_open_incident(plugin):

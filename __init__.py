@@ -31,6 +31,10 @@ MISS_LIMIT = 3          # failed picks in a row (per task) before the reply says
 MISS_BLOCK = 6          # ...and before the guard refuses more picks until a person's /arm check
 MISS_FORGET_S = 600     # a miss older than this no longer counts
 PICKING = {"arm_pick_up", "arm_approach", "arm_grip"}
+OVERLOAD = 32           # the status bit a servo sets when held at its torque limit; it clears once the load comes off
+OVERLOAD_NEXT = ("A servo overloaded: it pressed on something at its torque limit, most likely the jaws landing on "
+                 "the block. Do arm_park: taking the load off clears an overload. Then arm_status; if the alarm is "
+                 "gone, arm_look and retry the pick.")
 
 SKILLS = {
     "arm_go_home": ("go_home", "Move the arm to its ready pose over the work area. Use it first, and to reset "
@@ -141,7 +145,10 @@ def _after_grip(reply, task_id):
     n = _count_miss(task_id, not held)
     if held:
         return reply
-    hint, measured = _missed_block_hint()
+    if any((reply.get("result") or {}).get("status") or []):
+        hint, measured = OVERLOAD_NEXT, None
+    else:
+        hint, measured = _missed_block_hint()
     if n >= MISS_LIMIT:
         hint = (f"That is {n} missed picks in a row: stop retrying. Tell the user what happened and what arm_look "
                 "shows, and let them check the block. " + hint)
@@ -195,6 +202,8 @@ def pick_up(args=None, **kwargs):
                 hint = f"The arm host refused it: {reply['error']}. Don't retry the same call."
             elif reply.get("incident"):
                 hint = _incident_next(reply["incident"])
+            elif any(result.get("status") or []):
+                hint = OVERLOAD_NEXT
             elif name == "approach":
                 hint = "The arm is parked by a fault: check arm_status and repair first."
             else:
@@ -370,7 +379,13 @@ def _guard(tool_name, task_id):
         else:
             way = "Fix the cause first: arm_check re-tests at home; if it still fails, it goes to a person."
         return {"action": "block", "message": f"The arm is parked: {said}. {way}"}
-    if any(st.get("status") or []):
+    bits = st.get("status") or []
+    if any(bits) and all(b in (0, OVERLOAD) for b in bits):
+        return {"action": "block", "message": f"A servo overloaded (status bits {bits}): it pressed on something at "
+                                              "its torque limit. arm_park takes the load off, which clears an "
+                                              "overload; then arm_status. If the alarm is gone, carry on; if it "
+                                              "stays, report it."}
+    if any(bits):
         return {"action": "block", "message": f"A servo reports an alarm (status bits {st['status']}). "
                                               "Park the arm (arm_park) and report it instead of moving."}
     return None

@@ -129,7 +129,7 @@ The plugin also adds:
 1. **Skills, not angles.** The model chooses from a fixed menu. Aim corrections are capped at 40 mm per axis and taught motions at their recorded speed, in code.
 2. **A watchdog in plain code, with no model in it.** It runs level-1 checks on every reading. On a fault it parks the arm and opens an incident. A fix counts only after the arm moves home and fresh readings pass.
 3. **The arm host refuses motion** while an incident is open or the arm is frozen. Parking is always allowed.
-4. **The `pre_tool_call` guard** blocks the plugin's motion tools in those same states, and on a servo alarm, before the call reaches the host. It tells the agent the way out: restart the sensor, re-check, or wait for a person.
+4. **The `pre_tool_call` guard** blocks the plugin's motion tools in those same states, and on a servo alarm, before the call reaches the host. It tells the agent the way out: restart the sensor, re-check, park to clear an overload (a servo held at its torque limit, as when the jaws land on the block), or wait for a person. Any other servo alarm means park and report.
 5. **The freeze is for people only.** No tool can unfreeze the arm.
 6. **A physical retry doesn't loop forever.** From the third missed pick in a row on a task, by `arm_pick_up` or by hand, the reply says to stop and ask the user. From the sixth, the guard refuses picks, approaches and grips in that task until a person types `/arm check`, or 10 minutes pass.
 
