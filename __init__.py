@@ -110,7 +110,7 @@ def _incident_next(inc):
 
 def _with_incident_next(reply):
     if reply.get("incident"):
-        reply["next"] = _incident_next(reply["incident"])
+        return {"next": _incident_next(reply["incident"]), **reply}
     return reply
 
 
@@ -153,6 +153,7 @@ def pick_up(args=None, **kwargs):
         result = reply.get("result") or {}
         steps.append({"step": name, "ok": bool(reply.get("ok") and ok(result)), "reply": reply})
         if not steps[-1]["ok"]:
+            measured = None
             if reply.get("error"):                      # the host refused the call itself
                 hint = f"The arm host refused it: {reply['error']}. Don't retry the same call."
             elif reply.get("incident"):
@@ -161,12 +162,14 @@ def pick_up(args=None, **kwargs):
                 hint = "The arm is parked by a fault: check arm_status and repair first."
             else:
                 hint, measured = _missed_block_hint()
-                if measured:
-                    steps.append({"step": "measure", "ok": True, "reply": measured})
-            return _json({"ok": False, "picked_up": False, "failed_at": name, "steps": steps, "hint": hint})
-    return _json({"ok": True, "picked_up": True, "steps": steps,
+            # the verdict and what to do first, the details after: small models read from the top
+            out = {"ok": False, "picked_up": False, "failed_at": name, "hint": hint}
+            if measured:
+                out["measured"] = measured
+            return _json({**out, "steps": steps})
+    return _json({"ok": True, "picked_up": True,
                   "next": "Holding the block about 30 mm up. To put it back, call arm_release: it sets the block "
-                          "down where it was picked up."})
+                          "down where it was picked up.", "steps": steps})
 
 
 def _missed_block_hint():
@@ -215,18 +218,21 @@ def status(args=None, **kwargs):
 
 
 def _with_next(reply):
-    """Say what comes next after a repair or a hand-off, in words the agent can pass on to the user."""
+    """Say what comes next after a repair or a hand-off, in words the agent can pass on to the user. It goes
+    first in the reply: small models read from the top."""
     if not reply.get("ok"):
         return reply
     if reply.get("handed_off"):
-        reply["next"] = ("This needs a person. Stop moving the arm, and tell the user what failed and that a person "
-                         "must fix it and then type /arm check. The arm stays parked until then.")
+        nxt = ("This needs a person. Stop moving the arm, and tell the user what failed and that a person must fix "
+               "it and then type /arm check. The arm stays parked until then.")
     elif reply.get("verified"):
-        reply["next"] = "Fixed and checked at home. Carry on with the task."
+        nxt = "Fixed and checked at home. Carry on with the task."
     elif reply.get("verified") is False:
-        reply["next"] = ("Not fixed. Read arm_status; if it still fails, hand it to a person with arm_handoff and "
-                         "tell the user what failed.")
-    return reply
+        nxt = ("Not fixed. Read arm_status; if it still fails, hand it to a person with arm_handoff and tell the "
+               "user what failed.")
+    else:
+        return reply
+    return {"next": nxt, **reply}
 
 
 def restart_sensor(args=None, **kwargs):
