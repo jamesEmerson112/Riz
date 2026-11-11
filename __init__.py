@@ -210,9 +210,10 @@ def pick_up(args=None, **kwargs):
                 out["measured"] = measured
             return _json({**out, "steps": steps})
     _count_miss(kwargs.get("task_id") or "", False)
-    return _json({"ok": True, "picked_up": True,
-                  "next": "Holding the block about 30 mm up. To put it back, call arm_release: it sets the block "
-                          "down where it was picked up.", "steps": steps})
+    # what to do next goes first: a model that stops reading after "picked_up: true" ends the job holding the block
+    return _json({"next": "Holding the block about 30 mm up, so the job isn't done. To put it back, call "
+                          "arm_release: it sets the block down where it was picked up.",
+                  "ok": True, "picked_up": True, "steps": steps})
 
 
 def _missed_block_hint():
