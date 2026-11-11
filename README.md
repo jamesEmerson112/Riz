@@ -142,13 +142,18 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   | "Is the arm OK? Don't move it" | — | 3/3 (1) | 3/3 (1) |
 
   With thinking on, the 9B passed 17 of 18. The one miss was a correct run that ended with an empty reply.
+- **4B is the floor.**
+  - Qwen3.5-2B passed 20 of 27 jobs on its first pass, and on reruns of the five hardest it passed only about four in ten.
+  - Its misses were the model's: it claimed successes it didn't have, answered without calling a tool, or retried a block it couldn't reach 20–30 times.
+  - Since then, three missed picks in a row make the reply say "stop retrying and ask the user". That halved its long retry loops.
 - **What the runs changed**, each change a commit:
   - **`block_mm`:** asked to count grid squares, the 9B often flipped the sideways sign and kept retrying. `arm_look` now measures the block in plain code and hands over the exact `arm_pick_up` numbers, on a grid numbered in those same units.
   - **A measured retry:** after a missed grip, `arm_pick_up` measures where the block went and names the retry.
   - **Out of reach:** a block past 40 mm is reported as out of reach, and a refused aim says why.
   - **Picked, not put back:** the 9B once picked the block and called it put back without releasing it. Now a pick's reply says to release, and `arm_look` says when the gripper is holding the block.
   - **Restart first:** every sensor fault lists `arm_restart_sensor` first. A missing echo had sent the 9B to a person without trying it.
-  - **Next steps:** repairs, hand-offs and stopped moves say what comes next, so the agent has something concrete to tell the user.
+  - **Next steps:** repairs, hand-offs and stopped moves say what comes next, so the agent has something concrete to tell the user. Replies lead with the verdict and the next step, because small models read from the top.
+  - **Three misses:** three missed picks in a row make the reply say to stop retrying and ask the user. A physical retry shouldn't loop forever.
 - **The skill was rarely read.** The models loaded it in only a few runs; Hermes lists it, but loading it is up to the model. So each tool's own description and replies carry what the model needs.
 - **Hermes-4-14B didn't drive it** in this setup: text-only, through vLLM's `hermes` tool parser. It made clean tool calls with two tools, but with these 15 it mostly answered in prose: pick 1/2, bumped 0/6.
 - **A vision model can also read the grid itself.**
