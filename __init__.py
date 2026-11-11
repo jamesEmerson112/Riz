@@ -195,6 +195,9 @@ def _missed_block_hint():
     """After a grip that closed on nothing: measure where the block really is (the sim's camera, plain code)
     and say exactly what to do next. Without a camera (the real arm), say how to find out."""
     seen = _call("look", aim_mm=[0.0, 0.0], timeout=30.0)
+    if "no camera" in str(seen.get("error", "")):     # the real arm: nothing to look with
+        return ("The jaws closed on nothing, so the block isn't on the taught spot. Do arm_release and tell the user "
+                "to put the block back on its marked spot; this arm has no camera to find it."), None
     if not seen.get("ok") or not seen.get("block_seen"):
         return ("The jaws closed on nothing, so the block isn't where the arm aimed. Do arm_release, then arm_look "
                 "to see where it is."), None

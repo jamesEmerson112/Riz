@@ -17,7 +17,7 @@ The model never sends joint angles and never sits in the control loop:
 - motion stays refused until a repair passes a check;
 - no tool can lift a freeze. A person's `/arm unfreeze` does.
 
-It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with vLLM, each finished all 27 test jobs, faults included ([the numbers](#measured-in-the-sim)).
+It runs on small open models. In the sim, Qwen3.5-4B and Qwen3.5-9B, served with vLLM, each finished all 27 test jobs, faults included. The jobs were driven by [`tools/agent_eval.py`](tools/agent_eval.py), which calls the plugin the way Hermes does, not yet by Hermes itself ([the numbers](#measured-in-the-sim)).
 
 ## What it does
 
@@ -83,7 +83,7 @@ Plant a fault from another terminal, then give the agent a job. Between tries, r
 
 | Do this | Then ask | What happens |
 |---|---|---|
-| `.venv/bin/python -m so101_host fault block_shift dx_mm=30 dy_mm=-10` | "Pick up the block, then put it back." | The grip closes on nothing. The agent looks, reads the offset, retries with `dx_mm`/`dy_mm` and picks it up. |
+| `.venv/bin/python -m so101_host fault block_shift dx_mm=30 dy_mm=-10` | "Pick up the block, then put it back." | The agent finds the block with `arm_look`, or misses once and the reply says where it went. Then it picks the block up with the measured `dx_mm`/`dy_mm` and sets it down. |
 | `.venv/bin/python -m so101_host fault us_frozen` | "Pick up the block, then put it back." | The watchdog parks the arm mid-approach. The agent restarts the sensor, the fix is verified at home, and the pick finishes. |
 | `.venv/bin/python -m so101_host fault joint_stuck joint=2` | "Reach for the block." | The elbow stalls and the arm parks. `arm_check` fails again, so the incident goes to you. Run `.venv/bin/python -m so101_host clear`, then `/arm check` in the chat. |
 | `/arm freeze` in the chat | "Wave at me." | The guard refuses and the agent tells you why. Only `/arm unfreeze` lets it move again. |
@@ -155,12 +155,11 @@ The freeze and the guard bind this plugin's tools, not other tools. An agent wit
   - **Next steps:** repairs, hand-offs and stopped moves say what comes next, so the agent has something concrete to tell the user. Replies lead with the verdict and the next step, because small models read from the top.
   - **Three misses:** three missed picks in a row make the reply say to stop retrying and ask the user. A physical retry shouldn't loop forever.
 - **The skill was rarely read.** The models loaded it in only a few runs; Hermes lists it, but loading it is up to the model. So each tool's own description and replies carry what the model needs.
-- **Hermes-4-14B didn't drive it** in this setup: text-only, through vLLM's `hermes` tool parser. It made clean tool calls with two tools, but with these 15 it mostly answered in prose: pick 1/2, bumped 0/6.
 - **A vision model can also read the grid itself.**
   - Setup: a frontier vision model got only four top views from before the plain-code measurement, each with the block moved by an amount it wasn't told. It ran no code.
   - It read all four offsets to the millimetre: (22, 14), (−18, −27), (33, 6) and (−8, 31) mm. The picks aimed with its readings held 4 out of 4, and without the correction they missed 4 out of 4.
 - **The aim has some slack.** With the block moved (30, −10) mm, the pick still held with an aim off by up to ±12 mm forward or back. Sideways it held from 12 mm off one way to 4 mm off the other.
-- **29 tests:**
+- **33 tests:**
   - the plugin against a fake arm host: registration matches the manifest, every tool, the guard, `/arm`, and no host at all;
   - the arm host on the sim: the pick, a frozen sensor healed, a dead elbow handed to a person, the freeze, look-and-correct, and bounded offsets;
   - the real plugin against the real sim host, calling the guard and then the tool as Hermes does: look-and-correct, a frozen sensor blocked and then healed, and the freeze;
