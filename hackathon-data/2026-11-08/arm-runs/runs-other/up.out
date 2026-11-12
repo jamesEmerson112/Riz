@@ -1,0 +1,2 @@
+arm host up: {'pod': {'podd_up': True, 'image': 'good', 'incidents': []}, 'romulus': 'arm-twin-1'}
+logs in /Users/mrbam/Github/GitHub/Naive Nous YC Hackathon/.claude/worktrees/scheduled-md-sync-task-49ac70/prototypes/arm-sim/runs/logs · Romulus http://localhost:8000 · stories: PYTHONPATH=. .venv/bin/python -m armsim.stories a|b|stall

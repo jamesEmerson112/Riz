@@ -1,0 +1,45 @@
+{
+ "schema": "arm-escalation/v1",
+ "incident_id": "inc-06a2e21b-1-1",
+ "device_id": "arm-twin-1",
+ "category": "fault",
+ "opened_at": "2026-11-08T19:23:54+00:00",
+ "findings": [
+  {
+   "src": "watchdog",
+   "kind": "us_missing_echo",
+   "severity": "warn",
+   "summary": "No echo for 12 of 12 readings where the arm's pose says a surface is 102 mm away"
+  }
+ ],
+ "worker": null,
+ "window": "WINDOW src=arm-sim span=6.0s kinematics=on holding=no\nD01 +0.0 mm=- us=42 st=out_of_range pred=7.3\nD02 +0.1 mm=- us=42 st=out_of_range pred=7.3\nD03 +0.2 mm=- us=42 st=out_of_range pred=7.3\nD04 +0.3 mm=- us=42 st=out_of_range pred=7.3\nD05 +0.4 mm=- us=42 st=out_of_range pred=7.3\nD06 +0.5 mm=- us=42 st=out_of_range pred=7.3\nD07 +0.6 mm=- us=42 st=out_of_range pred=7.3\nD08 +0.7 mm=- us=42 st=out_of_range pred=7.3\nD09 +0.8 mm=- us=42 st=out_of_range pred=7.3\nD10 +0.9 mm=- us=42 st=out_of_range pred=7.3\nD11 +1.0 mm=- us=42 st=out_of_range pred=7.3\nD12 +1.1 mm=- us=42 st=out_of_range pred=7.3\nD13 +1.2 mm=- us=42 st=out_of_range pred=7.3\nD14 +1.3 mm=- us=42 st=out_of_range pred=7.3\nD15 +1.4 mm=- us=42 st=out_of_range pred=7.3\nD16 +1.6 mm=- us=42 st=out_of_range pred=7.3\nD17 +1.7 mm=- us=42 st=out_of_range pred=7.3\nD18 +1.8 mm=- us=42 st=out_of_range pred=7.3\nD19 +1.9 mm=- us=42 st=out_of_range pred=7.3\nD20 +2.0 mm=- us=42 st=out_of_range pred=7.3\nD21 +2.1 mm=- us=42 st=out_of_range pred=7.3\nD22 +2.2 mm=- us=42 st=out_of_range pred=7.3\nD23 +2.3 mm=- us=42 st=out_of_range pred=7.3\nD24 +2.4 mm=- us=42 st=out_of_range pred=7.3\nD25 +2.5 mm=- us=42 st=out_of_range pred=7.3\nD26 +2.6 mm=- us=42 st=out_of_range pred=7.3\nD27 +2.7 mm=- us=42 st=out_of_range pred=7.3\nD28 +2.8 mm=- us=42 st=out_of_range pred=7.3\nD29 +2.9 mm=- us=42 st=out_of_range pred=7.3\nD30 +3.0 mm=- us=42 st=out_of_range pred=7.3\nD31 +3.1 mm=- us=42 st=out_of_range pred=7.3\nD32 +3.2 mm=- us=42 st=out_of_range pred=7.3\nD33 +3.3 mm=- us=42 st=out_of_range pred=7.3\nD34 +3.4 mm=- us=42 st=out_of_range pred=7.3\nD35 +3.5 mm=- us=42 st=out_of_range pred=7.3\nD36 +3.6 mm=- us=42 st=out_of_range pred=7.3\nD37 +3.7 mm=- us=42 st=out_of_range pred=7.3\nD38 +3.8 mm=- us=42 st=out_of_range pred=7.3\nD39 +3.9 mm=- us=42 st=out_of_range pred=7.3\nD40 +4.0 mm=- us=42 st=out_of_range pred=7.3\nD41 +4.1 mm=- us=42 st=out_of_range pred=7.3\nD42 +4.2 mm=- us=42 st=out_of_range pred=7.3\nD43 +4.3 mm=- us=42 st=out_of_range pred=37.7\nD44 +4.4 mm=- us=42 st=out_of_range pred=71.4\nD45 +4.5 mm=- us=42 st=out_of_range pred=78.4\nD46 +4.6 mm=- us=42 st=out_of_range pred=83.8\nD47 +4.7 mm=- us=42 st=out_of_range pred=88.2\nD48 +4.8 mm=- us=42 st=out_of_range pred=91.7\nD49 +4.9 mm=- us=42 st=out_of_range pred=112.5\nD50 +5.0 mm=- us=42 st=out_of_range pred=124.4\nD51 +5.1 mm=- us=42 st=out_of_range pred=126.6\nD52 +5.2 mm=- us=42 st=out_of_range pred=128.5\nD53 +5.3 mm=- us=42 st=out_of_range pred=129.7\nD54 +5.4 mm=- us=42 st=out_of_range pred=130.0\nD55 +5.5 mm=- us=42 st=out_of_range pred=129.8\nD56 +5.6 mm=- us=42 st=out_of_range pred=128.9\nD57 +5.7 mm=- us=42 st=out_of_range pred=127.1\nD58 +5.8 mm=- us=42 st=out_of_range pred=126.5\nD59 +5.9 mm=- us=42 st=out_of_range pred=127.4\nJS pos=0.0,-95.0,90.0,55.0,90.8,-0.0 st=0,0,0,0,0,0 gripper_load=0.029\nL podd=up image=good\nINC1 src=watchdog kind=us_missing_echo severity=warn summary=\"No echo for 12 of 12 readings where the arm's pose says a surface is 102 mm away\"",
+ "state": {
+  "mode": "sim",
+  "kinematics": true,
+  "parked": true,
+  "pod_image": "good",
+  "job": {
+   "card_id": "crd_0f9f192f7cce",
+   "steps": [
+    "go_home",
+    "reach",
+    "approach",
+    "grip",
+    "lift",
+    "release",
+    "go_home"
+   ],
+   "failed_step": "reach"
+  },
+  "tried": []
+ },
+ "allowed_actions": [
+  "restart_sensor",
+  "verify",
+  "park",
+  "handoff_human",
+  "no_action"
+ ],
+ "deadline_s": 90.0
+}

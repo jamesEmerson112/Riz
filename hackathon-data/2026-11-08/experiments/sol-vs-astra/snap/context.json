@@ -1,0 +1,709 @@
+{
+ "coordinate_frame": "metres from the centre of the arm's base: x forward (where the arm faces at pan 0), y to the arm's left, z up (the twin's estimated calibration)",
+ "joint_order": [
+  "shoulder_pan",
+  "shoulder_lift",
+  "elbow_flex",
+  "wrist_flex",
+  "wrist_roll",
+  "gripper"
+ ],
+ "tries": [
+  {
+   "try": "g4",
+   "recording": "recording_3",
+   "pan_offset": 8.0,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": true,
+   "holding_s": 0.56,
+   "widest_hold": 62.7,
+   "peak_grip_load_nm": 0.78,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag settled slightly lower on the camera-left pile but remains outside the box; the 0.56 s hold indicates only a brief grasp, not delivery. The measured closure at (0.138, -0.117, 0.025) m appears below the raised bag body, consistent with catching low packaging rather than securing the target, although exact image-to-coordinate alignment is uncertain.",
+   "bag_estimate": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.138,
+     -0.117,
+     0.025
+    ],
+    "joints_deg": [
+     50.8,
+     -102.9,
+     93.4,
+     59.6,
+     17.5,
+     62.7
+    ],
+    "t_s": 13.96
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.129,
+     0.073,
+     0.062
+    ],
+    "joints_deg": [
+     -39.7,
+     -75.8,
+     60.9,
+     87.6,
+     -1.7,
+     19.9
+    ],
+    "t_s": 28.52
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g5",
+   "recording": "wave",
+   "pan_offset": 10.0,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": true,
+   "holding_s": 0.7,
+   "widest_hold": 48.3,
+   "peak_grip_load_nm": 0.78,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag tilted upward at its arm-facing end but remains on the camera-left pile outside the box; the 0.70 s grasp did not produce delivery. Closure at (0.115, -0.106, 0.060) m appears near that end rather than the broader bag body farther camera-left, although image-to-coordinate alignment is uncertain.",
+   "bag_estimate": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.115,
+     -0.106,
+     0.06
+    ],
+    "joints_deg": [
+     55.6,
+     -59.7,
+     55.8,
+     80.1,
+     16.6,
+     48.3
+    ],
+    "t_s": 11.58
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.131,
+     0.07,
+     0.083
+    ],
+    "joints_deg": [
+     -37.8,
+     -59.5,
+     44.5,
+     101.2,
+     -3.1,
+     5.6
+    ],
+    "t_s": 24.04
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g6",
+   "recording": "recording_3",
+   "pan_offset": 10.0,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": true,
+   "holding_s": 0.54,
+   "widest_hold": 62.5,
+   "peak_grip_load_nm": 0.74,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag is visibly outside the box on the camera-left pile; BEFORE and AFTER are the same file, so movement cannot be established, and the 0.54 s hold does not identify the object grasped. The last closure at (0.134,-0.120,0.025) m was likely below the raised target edge, catching low packaging; dimensions and ground-plane positions are rough monocular estimates, and no previous non-null bag_e",
+   "bag_estimate": {
+    "size_cm": [
+     22,
+     16,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.2
+    ],
+    "near_edge_m": [
+     0.125,
+     -0.1
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.134,
+     -0.12,
+     0.025
+    ],
+    "joints_deg": [
+     52.7,
+     -102.9,
+     93.5,
+     59.6,
+     17.5,
+     62.5
+    ],
+    "t_s": 14.09
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.132,
+     0.07,
+     0.063
+    ],
+    "joints_deg": [
+     -37.8,
+     -76.2,
+     60.9,
+     87.6,
+     -2.1,
+     19.9
+    ],
+    "t_s": 28.52
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g1",
+   "recording": "wave",
+   "pan_offset": 6.0,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": true,
+   "holding_s": 0.73,
+   "widest_hold": 48.1,
+   "peak_grip_load_nm": 0.78,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag tipped and shifted across the camera-left pile but remains outside the box; the 0.73 s hold establishes a brief grasp, not delivery. Relative to its visible arm-facing edge, closure at (0.120,-0.098,0.057) m appears slightly too far toward the arm's centreline; rough monocular estimates retain the earlier size but revise the centre from (0.16,-0.20) and nearest edge from (0.125,-0.10),",
+   "bag_estimate": {
+    "size_cm": [
+     22,
+     16,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.21
+    ],
+    "near_edge_m": [
+     0.115,
+     -0.105
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.12,
+     -0.098,
+     0.057
+    ],
+    "joints_deg": [
+     51.5,
+     -59.4,
+     56.5,
+     80.9,
+     16.7,
+     48.1
+    ],
+    "t_s": 11.72
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.126,
+     0.076,
+     0.083
+    ],
+    "joints_deg": [
+     -41.8,
+     -59.5,
+     44.7,
+     101.2,
+     -3.1,
+     5.6
+    ],
+    "t_s": 24.26
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g2",
+   "recording": "wave",
+   "pan_offset": 9.5,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": true,
+   "holding_s": 0.75,
+   "widest_hold": 48.3,
+   "peak_grip_load_nm": 0.73,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag, including its white-labelled end, remains outside the box on the camera-left pile; identical BEFORE and AFTER files cannot establish movement, and the 0.75 s hold does not establish target pickup. The last closure at (0.114,-0.103,0.058) m was approximately at its arm-facing edge; the whole-bag length estimate is revised from 22 to roughly 24 cm, but neither edge depth nor height is r",
+   "bag_estimate": {
+    "size_cm": [
+     24,
+     16,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.21
+    ],
+    "near_edge_m": [
+     0.11,
+     -0.105
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.114,
+     -0.103,
+     0.058
+    ],
+    "joints_deg": [
+     54.9,
+     -59.5,
+     56.2,
+     80.9,
+     16.6,
+     48.3
+    ],
+    "t_s": 11.74
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.131,
+     0.071,
+     0.083
+    ],
+    "joints_deg": [
+     -38.3,
+     -59.5,
+     44.5,
+     101.2,
+     -3.1,
+     5.7
+    ],
+    "t_s": 24.34
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g1",
+   "recording": "recording_2",
+   "pan_offset": 10.0,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": true,
+   "holding_s": 1.21,
+   "widest_hold": 77.8,
+   "peak_grip_load_nm": 0.68,
+   "arrived": true,
+   "eye": null,
+   "debug": "The whole red bag, including its white-labelled end, shifted and folded farther camera-left but remains outside the box; the last closure at (0.105,-0.090,0.024) m was approximately 15 mm short in x and 30 mm short toward negative y of its estimated nearest edge, and below the raised rim, so the 1.21 s hold does not establish target pickup. Relative to the previous estimate, retain the rough dimen",
+   "bag_estimate": {
+    "size_cm": [
+     24,
+     16,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.22
+    ],
+    "near_edge_m": [
+     0.12,
+     -0.12
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.105,
+     -0.09,
+     0.024
+    ],
+    "joints_deg": [
+     53.6,
+     -53.2,
+     65.9,
+     73.5,
+     4.4,
+     77.8
+    ],
+    "t_s": 16.86
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "g2",
+   "recording": "wave",
+   "pan_offset": 10.0,
+   "speed": 0.55,
+   "squeeze_pct": null,
+   "grasped": true,
+   "holding_s": 0.68,
+   "widest_hold": 48.1,
+   "peak_grip_load_nm": 0.82,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag, including its white-labelled end, settled lower and extended slightly toward the arm but remains outside the box; the 0.68 s hold did not deliver it. Whole-bag dimensions remain roughly 24 \u00d7 16 \u00d7 6 cm, with clipping and perspective limiting accuracy; revising the previous edge estimate from (0.12,-0.12) to approximately (0.14,-0.11) puts the last closure at (0.113,-0.103,0.057) about ",
+   "bag_estimate": {
+    "size_cm": [
+     24,
+     16,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.21
+    ],
+    "near_edge_m": [
+     0.14,
+     -0.11
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.113,
+     -0.103,
+     0.057
+    ],
+    "joints_deg": [
+     55.5,
+     -59.4,
+     56.6,
+     80.7,
+     16.7,
+     48.1
+    ],
+    "t_s": 10.81
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.131,
+     0.07,
+     0.083
+    ],
+    "joints_deg": [
+     -37.8,
+     -59.5,
+     44.5,
+     101.2,
+     -3.1,
+     5.6
+    ],
+    "t_s": 22.32
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g3",
+   "recording": "recording_3",
+   "pan_offset": 5.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.69,
+   "widest_hold": 62.5,
+   "peak_grip_load_nm": 0.93,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag, including its white-labelled end, remains on the camera-left pile outside the box; identical BEFORE and AFTER files cannot establish movement, and the 0.69 s hold at 99% squeeze does not establish target pickup. Retaining the rough whole-bag dimensions and centre but revising the nearest edge slightly from (0.14,-0.11) to (0.14,-0.115) m puts the last closure (0.144,-0.111,0.023) m ju",
+   "bag_estimate": {
+    "size_cm": [
+     24,
+     16,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.21
+    ],
+    "near_edge_m": [
+     0.14,
+     -0.115
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.144,
+     -0.111,
+     0.023
+    ],
+    "joints_deg": [
+     47.7,
+     -102.5,
+     94.2,
+     59.2,
+     18.2,
+     62.5
+    ],
+    "t_s": 14.1
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.124,
+     0.077,
+     0.062
+    ],
+    "joints_deg": [
+     -42.8,
+     -75.8,
+     60.9,
+     87.8,
+     -1.7,
+     1.8
+    ],
+    "t_s": 28.48
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g1",
+   "recording": "recording_3",
+   "pan_offset": 8.5,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.69,
+   "widest_hold": 62.5,
+   "peak_grip_load_nm": 0.91,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag, including its white-labelled end, remains outside the box with no clear displacement; retain the previous approximate whole-bag estimate because clipping and perspective prevent a reliable refinement. Closure at (0.136,-0.116,0.021) m was about 4 mm short in x of the estimated near-arm edge, and the 0.69 s hold despite 99% squeeze suggests marginal edge engagement rather than verified",
+   "bag_estimate": {
+    "size_cm": [
+     24,
+     16,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.21
+    ],
+    "near_edge_m": [
+     0.14,
+     -0.115
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.136,
+     -0.116,
+     0.021
+    ],
+    "joints_deg": [
+     51.2,
+     -102.4,
+     94.1,
+     60.1,
+     18.0,
+     62.5
+    ],
+    "t_s": 14.12
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.13,
+     0.072,
+     0.063
+    ],
+    "joints_deg": [
+     -39.2,
+     -76.1,
+     60.9,
+     87.6,
+     -1.7,
+     1.8
+    ],
+    "t_s": 28.6
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g2",
+   "recording": "recording_3",
+   "pan_offset": 7.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.7,
+   "widest_hold": 62.7,
+   "peak_grip_load_nm": 0.91,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag visibly unfolded and rose toward the arm but remains outside the box on camera-left; including its white-labelled section, I revise the earlier 24 \u00d7 16 \u00d7 6 cm estimate to roughly 28 \u00d7 18 \u00d7 6 cm, with substantial uncertainty from clipping and perspective. The last closure at (0.138,-0.113,0.021) m briefly engaged packaging, but the newly raised near-arm edge appears approximately 38 mm ",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     18,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.17
+    ],
+    "near_edge_m": [
+     0.14,
+     -0.075
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.138,
+     -0.113,
+     0.021
+    ],
+    "joints_deg": [
+     49.8,
+     -102.4,
+     94.1,
+     60.4,
+     18.0,
+     62.7
+    ],
+    "t_s": 14.11
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.128,
+     0.075,
+     0.063
+    ],
+    "joints_deg": [
+     -40.8,
+     -76.0,
+     60.9,
+     87.6,
+     -1.7,
+     1.8
+    ],
+    "t_s": 28.59
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g3",
+   "recording": "wave",
+   "pan_offset": -3.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.52,
+   "widest_hold": 48.3,
+   "peak_grip_load_nm": 0.86,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag, including its white-labelled section, folded down onto the camera-left pile rather than entering the box; the 0.52 s hold was only brief engagement. Retaining the previous rough whole-bag dimensions, I revise its centre from (0.16,-0.17) to (0.16,-0.18) m and nearest edge from (0.14,-0.075) to approximately (0.13,-0.09) m: the last closure at (0.137,-0.087,0.061) m was near that edge ",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     18,
+     6
+    ],
+    "centre_m": [
+     0.16,
+     -0.18
+    ],
+    "near_edge_m": [
+     0.13,
+     -0.09
+    ],
+    "confidence": "low"
+   },
+   "gripper_closed_at": {
+    "tip_m": [
+     0.137,
+     -0.087,
+     0.061
+    ],
+    "joints_deg": [
+     42.5,
+     -59.9,
+     55.7,
+     80.1,
+     16.6,
+     48.3
+    ],
+    "t_s": 11.72
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.113,
+     0.088,
+     0.082
+    ],
+    "joints_deg": [
+     -50.4,
+     -59.7,
+     45.0,
+     101.2,
+     -3.1,
+     1.8
+    ],
+    "t_s": 24.36
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g4",
+   "recording": "wave",
+   "pan_offset": 4.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.54,
+   "widest_hold": 48.1,
+   "peak_grip_load_nm": 0.88,
+   "arrived": true,
+   "eye": null,
+   "debug": null,
+   "bag_estimate": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.125,
+     -0.099,
+     0.061
+    ],
+    "joints_deg": [
+     49.9,
+     -59.9,
+     55.7,
+     80.1,
+     16.7,
+     48.1
+    ],
+    "t_s": 11.74
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.124,
+     0.078,
+     0.082
+    ],
+    "joints_deg": [
+     -43.4,
+     -59.8,
+     44.8,
+     101.2,
+     -3.1,
+     1.8
+    ],
+    "t_s": 24.28
+   },
+   "points": "measured"
+  }
+ ]
+}

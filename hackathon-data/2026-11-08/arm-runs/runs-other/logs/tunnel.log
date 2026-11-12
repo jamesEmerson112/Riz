@@ -1,0 +1,32 @@
+channel 3: open failed: connect failed: Connection refused
+channel 4: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 4: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 4: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 4: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 4: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+channel 3: open failed: connect failed: Connection refused
+Read from remote host 192.168.50.2: Can't assign requested address
+client_loop: send disconnect: Broken pipe

@@ -1,0 +1,824 @@
+Query: FOCUS: only recording_2 now. It is the motion that grips: at pan -4 it 
+carried three bags for 20.7 s (it held them all the way home because its jaws 
+never opened; they now open over the box, 10 s in). Its other tries held about 
+0.9 s (pan -10: 1.25 s, -6: 0.91 s, +2 / +6 / +10: about 0.9 s). Search near -4 
+in small steps (0.5 to 2 degrees) and try speed too; pick recording_2 every 
+time. You are debugging a robot arm on a bench. The task: pick up the red bag of
+chips and put it in the open cardboard box. Other bags on the bench don't count.
+The arm can only replay one of three motions taught by hand (recordings: wave, 
+recording_2, recording_3), each a pick-and-place, optionally rotated at the base
+by pan degrees (-10 to +10; which way positive turns as seen from the camera is 
+unknown, so infer it from the history) and slowed by speed (0.5 to 1.0, lower is
+slower). The gripper data per try: holding_s is how long the jaws were stopped 
+open under load while told to close (0.5 s or more counts as a grasp), 
+widest_hold is how far open they stopped (0-100), peak_grip_load_nm is the 
+gripper's peak load, gripper_closed_at / gripper_opened_at are where the gripper
+tip was (and the joint angles) when the jaws closed for the grasp and opened for
+the drop. The structured context, all tries oldest first (also saved as 
+context.json):
+{
+ "coordinate_frame": "metres from the centre of the arm's base: x forward (where
+the arm faces at pan 0), y to the arm's left, z up (the twin's estimated 
+calibration)",
+ "joint_order": [
+  "shoulder_pan",
+  "shoulder_lift",
+  "elbow_flex",
+  "wrist_flex",
+  "wrist_roll",
+  "gripper"
+ ],
+ "tries": [
+  {
+   "try": "g10",
+   "probe": null,
+   "go": null,
+   "probe_check": null,
+   "recording": "recording_2",
+   "pan_offset": 6.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.9,
+   "widest_hold": 77.8,
+   "peak_grip_load_nm": 0.86,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag, including its white labels, remains on the bench 
+outside the box; the visible jaws are near its right-hand sealed rim in F8, but 
+no jaw is clearly underneath. The last closing point [0.110,-0.084,0.022] m is 
+slightly larger in x and less negative in y than the estimated edge; the 0.90 s 
+hold does not demonstrate retention, and the identical BEFORE/AFTER files cannot
+establish movement",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     19,
+     6
+    ],
+    "centre_m": [
+     0.23,
+     -0.15
+    ],
+    "near_edge_m": [
+     0.105,
+     -0.09
+    ],
+    "edge_cell": "F8",
+    "jaws_cell": "F8",
+    "confidence": "low"
+   },
+   "jaws_cell": null,
+   "edge_cell": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.11,
+     -0.084,
+     0.022
+    ],
+    "joints_deg": [
+     49.8,
+     -52.8,
+     66.3,
+     73.5,
+     4.0,
+     77.8
+    ],
+    "t_s": 16.88
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "p1",
+   "probe": true,
+   "go": true,
+   "probe_check": "The open jaws reach the red bag's near edge in F8 within 
+about half a cell and sit low enough to tuck under it, with the lower contact 
+partly hidden by the bag.",
+   "recording": "recording_2",
+   "pan_offset": 10.0,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": null,
+   "holding_s": null,
+   "widest_hold": null,
+   "peak_grip_load_nm": null,
+   "arrived": true,
+   "eye": null,
+   "debug": null,
+   "bag_estimate": null,
+   "jaws_cell": "F8",
+   "edge_cell": "F8",
+   "gripper_closed_at": {
+    "tip_m": [
+     0.104,
+     -0.089,
+     0.022
+    ],
+    "joints_deg": [
+     53.5,
+     -52.9,
+     66.2,
+     73.8,
+     4.0,
+     86.8
+    ]
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "g2",
+   "probe": null,
+   "go": null,
+   "probe_check": null,
+   "recording": "recording_2",
+   "pan_offset": 10.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.9,
+   "widest_hold": 77.7,
+   "peak_grip_load_nm": 0.91,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag, including its white labels, remains outside the box; 
+CLOSE shows the fingertips near the D8/E8 boundary on the bag face, roughly half
+a cell camera-left of its right-hand rim in E8, without a visibly tucked-under 
+jaw. The 0.90 s hold at [0.106,-0.091,0.024] m did not retain it; the bag has 
+shifted, so the revised edge coordinates are only a rough estimate, while its 
+whole-bag dimensio",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     19,
+     6
+    ],
+    "centre_m": [
+     0.23,
+     -0.15
+    ],
+    "near_edge_m": [
+     0.122,
+     -0.072
+    ],
+    "edge_cell": "E8",
+    "jaws_cell": "D8",
+    "confidence": "low"
+   },
+   "jaws_cell": null,
+   "edge_cell": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.106,
+     -0.091,
+     0.024
+    ],
+    "joints_deg": [
+     53.5,
+     -52.7,
+     65.4,
+     73.5,
+     4.4,
+     77.7
+    ],
+    "t_s": 16.81
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "g3",
+   "probe": null,
+   "go": null,
+   "probe_check": null,
+   "recording": "recording_2",
+   "pan_offset": -4.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 20.7,
+   "widest_hold": 77.8,
+   "peak_grip_load_nm": 0.95,
+   "arrived": true,
+   "eye": null,
+   "debug": "The 20.7 s loaded hold suggests sustained contact, but the raised 
+jaws are approximately in F3 and this view does not establish that the target 
+red bag was released within the box walls; BEFORE and AFTER are the same file. 
+The overlapping bags and occlusion prevent a reliable new whole-bag measurement,
+so the dimensions and coordinates are retained as low-confidence prior 
+estimates, not newly meas",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     19,
+     6
+    ],
+    "centre_m": [
+     0.23,
+     -0.15
+    ],
+    "near_edge_m": [
+     0.122,
+     -0.072
+    ],
+    "edge_cell": "E8",
+    "jaws_cell": "F3",
+    "confidence": "low"
+   },
+   "jaws_cell": null,
+   "edge_cell": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.124,
+     -0.071,
+     0.023
+    ],
+    "joints_deg": [
+     39.8,
+     -53.1,
+     66.0,
+     73.7,
+     4.2,
+     77.8
+    ],
+    "t_s": 16.69
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "p1",
+   "probe": true,
+   "go": true,
+   "probe_check": "The open jaws reach the red bag's right edge in E7 within 
+about half a cell, with the lower jaw obscured at the edge and low enough to 
+tuck underneath.",
+   "recording": "recording_2",
+   "pan_offset": -2.0,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": null,
+   "holding_s": null,
+   "widest_hold": null,
+   "peak_grip_load_nm": null,
+   "arrived": true,
+   "eye": null,
+   "debug": null,
+   "bag_estimate": null,
+   "jaws_cell": "E7",
+   "edge_cell": "E7",
+   "gripper_closed_at": {
+    "tip_m": [
+     0.125,
+     -0.078,
+     0.027
+    ],
+    "joints_deg": [
+     41.8,
+     -52.9,
+     64.8,
+     73.2,
+     4.8,
+     86.7
+    ]
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "g2",
+   "probe": null,
+   "go": null,
+   "probe_check": null,
+   "recording": "recording_2",
+   "pan_offset": -6.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.88,
+   "widest_hold": 77.7,
+   "peak_grip_load_nm": 0.87,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag remains on the bench left of the box; the raised jaws 
+are around G3, and the 0.88 s hold does not establish retention. The last 
+closing point [0.129,-0.070,0.025] m is slightly forward and less negative in y 
+than the roughly estimated near rim; the identical BEFORE/AFTER image, cropped 
+bag and perspective make dimensions and metric coordinates low-confidence 
+estimates rather than a rel",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     19,
+     6
+    ],
+    "centre_m": [
+     0.23,
+     -0.15
+    ],
+    "near_edge_m": [
+     0.124,
+     -0.076
+    ],
+    "edge_cell": "G8",
+    "jaws_cell": "G3",
+    "confidence": "low"
+   },
+   "jaws_cell": null,
+   "edge_cell": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.129,
+     -0.07,
+     0.025
+    ],
+    "joints_deg": [
+     37.9,
+     -52.7,
+     65.3,
+     73.0,
+     4.4,
+     77.7
+    ],
+    "t_s": 16.8
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.116,
+     0.081,
+     0.073
+    ],
+    "joints_deg": [
+     -46.5,
+     -51.8,
+     44.0,
+     97.8,
+     4.6,
+     1.8
+    ],
+    "t_s": 26.12
+   },
+   "points": "measured"
+  },
+  {
+   "try": "p1",
+   "probe": true,
+   "go": true,
+   "probe_check": "The open jaws reach the red bag's upper edge within about 
+half a cell, with the lower jaw area obscured by the bag and positioned low 
+enough to tuck underneath and clamp its edge.",
+   "recording": "recording_2",
+   "pan_offset": -3.0,
+   "speed": 0.5,
+   "squeeze_pct": null,
+   "grasped": null,
+   "holding_s": null,
+   "widest_hold": null,
+   "peak_grip_load_nm": null,
+   "arrived": true,
+   "eye": null,
+   "debug": null,
+   "bag_estimate": null,
+   "jaws_cell": "F7",
+   "edge_cell": "F8",
+   "gripper_closed_at": {
+    "tip_m": [
+     0.122,
+     -0.072,
+     0.024
+    ],
+    "joints_deg": [
+     40.8,
+     -52.8,
+     65.6,
+     74.3,
+     4.1,
+     86.7
+    ]
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "g2",
+   "probe": null,
+   "go": null,
+   "probe_check": null,
+   "recording": "recording_2",
+   "pan_offset": -1.0,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.9,
+   "widest_hold": 78.0,
+   "peak_grip_load_nm": 0.88,
+   "arrived": true,
+   "eye": null,
+   "debug": "The red bag, including its white labels, is outside the box; its 
+cropped outline and overlapping bags support only rough retained dimensions, and
+the identical BEFORE/AFTER image cannot establish movement. The last grasp at 
+[0.121,-0.076,0.024] m was approximately 3 mm short in x and 3 mm too negative 
+in y relative to the estimated near rim; its 0.90 s hold does not demonstrate an
+under-edge grip.",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     19,
+     6
+    ],
+    "centre_m": [
+     0.23,
+     -0.15
+    ],
+    "near_edge_m": [
+     0.124,
+     -0.073
+    ],
+    "edge_cell": "F8",
+    "jaws_cell": "G2",
+    "confidence": "low"
+   },
+   "jaws_cell": null,
+   "edge_cell": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.121,
+     -0.076,
+     0.024
+    ],
+    "joints_deg": [
+     42.7,
+     -53.0,
+     65.8,
+     73.7,
+     4.5,
+     78.0
+    ],
+    "t_s": 16.83
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.123,
+     0.075,
+     0.074
+    ],
+    "joints_deg": [
+     -41.8,
+     -51.8,
+     43.8,
+     97.7,
+     4.8,
+     1.8
+    ],
+    "t_s": 26.17
+   },
+   "points": "measured"
+  },
+  {
+   "try": "p1",
+   "probe": true,
+   "go": true,
+   "probe_check": "The open jaws appear to reach the red bag's edge in F8 within
+about half a cell, low enough for a jaw to tuck underneath, though the blurred 
+view hides the exact contact.",
+   "recording": "recording_2",
+   "pan_offset": -3.5,
+   "speed": 0.65,
+   "squeeze_pct": null,
+   "grasped": null,
+   "holding_s": null,
+   "widest_hold": null,
+   "peak_grip_load_nm": null,
+   "arrived": true,
+   "eye": "NOT",
+   "debug": "The red bag remains outside the box; the last try was an open-jaw 
+probe in F8, with contact obscured rather than a demonstrated under-edge grasp. 
+Its measured tip [0.125,-0.073,0.025] m is approximately 1 mm short in x and 1 
+mm too negative in y relative to the estimated rim; cropping and overlap prevent
+reliable new whole-bag measurements, so the earlier dimensions and centre remain
+rough estimat",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     19,
+     6
+    ],
+    "centre_m": [
+     0.23,
+     -0.15
+    ],
+    "near_edge_m": [
+     0.126,
+     -0.072
+    ],
+    "edge_cell": "F8",
+    "jaws_cell": "F8",
+    "confidence": "low"
+   },
+   "jaws_cell": "F8",
+   "edge_cell": "F8",
+   "gripper_closed_at": {
+    "tip_m": [
+     0.125,
+     -0.073,
+     0.025
+    ],
+    "joints_deg": [
+     40.1,
+     -53.2,
+     65.2,
+     74.0,
+     4.3,
+     87.1
+    ]
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "p1",
+   "probe": true,
+   "go": true,
+   "probe_check": "The open jaws appear to reach the red bag's edge in F8 within
+about half a cell, low enough for a jaw to tuck underneath, though the blurred 
+view obscures the underside.",
+   "recording": "recording_2",
+   "pan_offset": -4.0,
+   "speed": 0.65,
+   "squeeze_pct": null,
+   "grasped": null,
+   "holding_s": null,
+   "widest_hold": null,
+   "peak_grip_load_nm": null,
+   "arrived": true,
+   "eye": "NOT",
+   "debug": "The last try was an open-jaw probe, not a grasp; the red bag 
+remains outside the box, and the heavily blurred AFTER image cannot confirm a 
+jaw underneath its rim. The probe tip at [0.125,-0.072,0.024] m is roughly 1 mm 
+short in x and 1 mm too negative in y relative to the tentative edge estimate; 
+whole-bag dimensions including the white labels remain prior estimates because 
+cropping and blur preve",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     19,
+     6
+    ],
+    "centre_m": [
+     0.23,
+     -0.15
+    ],
+    "near_edge_m": [
+     0.126,
+     -0.071
+    ],
+    "edge_cell": "F8",
+    "jaws_cell": "F8",
+    "confidence": "low"
+   },
+   "jaws_cell": "F8",
+   "edge_cell": "F8",
+   "gripper_closed_at": {
+    "tip_m": [
+     0.125,
+     -0.072,
+     0.024
+    ],
+    "joints_deg": [
+     39.7,
+     -53.2,
+     65.6,
+     74.0,
+     4.4,
+     86.8
+    ]
+   },
+   "gripper_opened_at": null,
+   "points": "measured"
+  },
+  {
+   "try": "g2",
+   "probe": null,
+   "go": null,
+   "probe_check": null,
+   "recording": "recording_2",
+   "pan_offset": -4.5,
+   "speed": 0.65,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.9,
+   "widest_hold": 78.2,
+   "peak_grip_load_nm": 0.91,
+   "arrived": true,
+   "eye": "NOT",
+   "debug": "CLOSE shows the fingertips spanning E8\u2013F8 against the bag's 
+upper face, with the right fingertip roughly half a cell camera-right of the 
+visible sloping rim in F8 and no demonstrated under-edge jaw; the sequence shows
+no sustained lift or delivery, consistent with the 0.9 s hold. The measured 
+grasp [0.126,-0.071,0.023] m is approximately 1 mm forward and 2 mm toward the 
+arm's left of the tentative",
+   "bag_estimate": {
+    "size_cm": [
+     28,
+     19,
+     6
+    ],
+    "centre_m": [
+     0.23,
+     -0.15
+    ],
+    "near_edge_m": [
+     0.125,
+     -0.073
+    ],
+    "edge_cell": "F8",
+    "jaws_cell": "F8",
+    "confidence": "low"
+   },
+   "jaws_cell": null,
+   "edge_cell": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.126,
+     -0.071,
+     0.023
+    ],
+    "joints_deg": [
+     39.1,
+     -53.0,
+     65.9,
+     73.4,
+     4.3,
+     78.2
+    ],
+    "t_s": 13.33
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.118,
+     0.079,
+     0.074
+    ],
+    "joints_deg": [
+     -45.1,
+     -51.8,
+     43.9,
+     98.4,
+     4.4,
+     1.8
+    ],
+    "t_s": 20.64
+   },
+   "points": "measured"
+  },
+  {
+   "try": "g3",
+   "probe": null,
+   "go": null,
+   "probe_check": null,
+   "recording": "recording_2",
+   "pan_offset": -3.5,
+   "speed": 0.5,
+   "squeeze_pct": 99,
+   "grasped": true,
+   "holding_s": 0.91,
+   "widest_hold": 77.7,
+   "peak_grip_load_nm": 0.92,
+   "arrived": true,
+   "eye": null,
+   "debug": null,
+   "bag_estimate": null,
+   "jaws_cell": null,
+   "edge_cell": null,
+   "gripper_closed_at": {
+    "tip_m": [
+     0.124,
+     -0.072,
+     0.024
+    ],
+    "joints_deg": [
+     40.1,
+     -53.1,
+     65.9,
+     73.5,
+     4.3,
+     77.7
+    ],
+    "t_s": 16.7
+   },
+   "gripper_opened_at": {
+    "tip_m": [
+     0.12,
+     0.078,
+     0.074
+    ],
+    "joints_deg": [
+     -44.0,
+     -51.8,
+     43.9,
+     97.9,
+     4.6,
+     1.8
+    ],
+    "t_s": 26.02
+   },
+   "points": "measured"
+  }
+ ]
+}
+Use your vision tool on the camera images of the last try: BEFORE 
+/Users/mrbam/Github/GitHub/Naive Nous YC 
+Hackathon/.claude/worktrees/scheduled-md-sync-task-49ac70/prototypes/arm-sim/run
+s/gentest/140057-g3-before-grid.jpg and AFTER /Users/mrbam/Github/GitHub/Naive 
+Nous YC 
+Hackathon/.claude/worktrees/scheduled-md-sync-task-49ac70/prototypes/arm-sim/run
+s/gentest/140141-g3-after-grid.jpg, and CLOSE /Users/mrbam/Github/GitHub/Naive 
+Nous YC 
+Hackathon/.claude/worktrees/scheduled-md-sync-task-49ac70/prototypes/arm-sim/run
+s/gentest/140117-g3-close-grid.jpg, taken the moment the jaws closed on the 
+grasp: it shows the jaws and the bag in the same picture, so read the miss from 
+it directly (both jaws on top of the bag, short of its edge, past it, or to its 
+left or right as seen in the image, and roughly how far) and correct the next 
+test by that, and SEQUENCE /Users/mrbam/Github/GitHub/Naive Nous YC 
+Hackathon/.claude/worktrees/scheduled-md-sync-task-49ac70/prototypes/arm-sim/run
+s/gentest/140141-g3-sheet.jpg: one image of 10 camera frames through the whole 
+last try, in time order left to right then top to bottom, each labelled with its
+seconds into the try (the grab is about a third of the way in, the drop over the
+box about two thirds): use it to see whether the bag came up with the jaws, when
+and where it slipped out, and where it fell; and the same kind of sheet for 
+earlier tries, to compare the whole motion across changes: g2 (recording_2, pan 
+-4.5, held 0.9 s) /Users/mrbam/Github/GitHub/Naive Nous YC 
+Hackathon/.claude/worktrees/scheduled-md-sync-task-49ac70/prototypes/arm-sim/run
+s/gentest/140030-g2-sheet.jpg. The camera faces the arm from the front at about 
+table height, so it may not see inside the box. Every image has a labelled grid:
+columns A-L left to right, rows 1-9 top to bottom, each cell's label in its 
+top-left corner. Name positions by cell (e.g. F6). The camera stays put between 
+tries, so a cell is the same spot on every try; cells are image positions, not 
+metres. Use the cells to aim: compare where the jaws were (jaws_cell) with the 
+edge (edge_cell) on each try, and how each change of pan or recording moved the 
+jaws' cell, then pick the test that moves the jaws onto the edge's cell. The 
+grip: tries with squeeze_pct 99 squeezed the gripper to 99% closed while 
+grasping. Tries without it squeezed as recorded: wave to 99%, recording_2 only 
+to ~69% and recording_3 to ~80%, so a short hold with those two may have been 
+too loose a grip rather than a wrong grasp point. Tries with probe true did not 
+grasp: the arm stopped with the jaws open at the closing point 
+(gripper_closed_at is where the open jaws were), you checked the camera, and 
+probe_check says where the jaws were relative to the bag's edge (go false = not 
+straddling it, so the full motion was skipped). Use those to aim the next test. 
+What the person at the bench sees on every try: the jaws do not straddle the 
+bag. Both jaws land on the same side, on top of the bag, and just pinch its 
+slippery face. A grip that holds needs one jaw under the bag's edge and one over
+it. So the closing point has to be AT the edge, at the edge's height, with the 
+open jaws reaching just past it, not on top of the bag body. You cannot change 
+the wrist or the height directly, only pan, speed and which recording, and the 
+recordings close at different heights (gripper_closed_at z: wave about 0.06 m, 
+recording_2 and recording_3 about 0.02 m, near the table). All three carry the 
+bag over the box and let go there (recording_2 opens its jaws at its dip over 
+the box, 10 s in). Choose the one whose closing height matches the edge, and aim
+its closing point onto the edge line. The red bag has some white labels on it: 
+they are part of the same bag, not a separate object, so measure the whole bag 
+including them, and don't take a white label for a gap or for the bag's edge. 
+Measure the red bag of chips in the AFTER image before you design the test: its 
+length, width and thickness in cm (for scale, the arm's upper arm and forearm 
+are each about 12-13 cm long, and the box is in view), and where its centre and 
+the edge nearest the arm are, in the arm's coordinate frame above. Compare with 
+your earlier bag_estimate in the tries (if any) and correct it. Advice from the 
+person at the bench: grabbing the bag by its edge (the flat sealed rim, or the 
+side nearest the arm) is usually easier than grabbing its full body, so don't 
+steer the grasp toward the middle of the bag; a grasp on the edge that held 
+briefly is close, so make it bite deeper into that edge. Then do the math: the 
+jaws must close on the bag's edge, so aim the grasp point there, and pick pan so
+the measured gripper_closed_at moves onto it. Then reply with ONE JSON object 
+and nothing else: {"verdict": "INSIDE" or "NOT" or "UNSURE" (is the red bag of 
+chips inside the box in the AFTER image: it counts as INSIDE when it sits within
+the box walls, even if part of it sticks out above the rim), "bag": {"size_cm": 
+, "centre_m": , "near_edge_m": , "edge_cell": "grid cell of the red bag's edge 
+nearest the arm", "jaws_cell": "grid cell where the jaws were on the last try 
+(in CLOSE if given, else the probe or AFTER image)", "confidence": "high" or 
+"medium" or "low"}, "debug": "one or two sentences: what happened on the last 
+try and why", "next": {"recording": "wave" or "recording_2" or "recording_3", 
+"pan": number, "speed": number, "why": "one sentence"}}. Use the coordinates: 
+say where the grasp point was relative to where the bag appears in the images, 
+and move it toward the bag. Design the next test to fix what went wrong; do not 
+repeat a try that failed the same way.
+👁️ Vision Locate jaws and red bag sealed edge by grid; are jaws atop face or straddling edge? Estimate image offset.
+👁️ Vision Estimate whole red bag including labels size and near edge grid, whether in box. Metric estimates uncertain.
+👁️ Vision Locate red bag and compare grasp edge.
+👁️ Vision Track target red bag through sequence; lift slip delivery?
+👁️ Vision Compare target red bag lift and jaw edge contact with latest try.
+
+────────────────────────────────────────
+☤ Hermes
+{"verdict":"NOT","bag":{"size_cm":[28,19,6],"centre_m":[0.23,-0.15],"near_edge_m":[0.125,-0.073],"edge_cell":"F8","jaws_cell":"E8","confidence":"low"},"debug":"CLOSE shows the fingertips across E8–F8 pressing the bag face, with the left fingertip roughly half a cell camera-left of the sloping rim in F8 and no demonstrated under-edge contact; both sequences show no sustained carry, and the red bag remains on the bench. The measured grasp [0.124,-0.072,0.024] m was roughly 1 mm short in x and 1 mm less negative in y than the tentative rim estimate, but cropping, overlap and perspective prevent reliable millimetre corrections or a new whole-bag measurement, so dimensions remain rough prior estimates.","next":{"recording":"recording_2","pan":-2.5,"speed":0.65,"why":"Test a 1-degree increase from -3.5 to shift contact slightly camera-right toward the F8 rim and toward more-negative y, using speed 0.65 as a new combination rather than repeating either failed face pinch; this tests edge alignment, not a guaranteed under-edge grasp."}}
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-2ebdb878d035c4620a0b44774c7650e0561aa4ea525d31abb201c903429f475a
+  hermes -c "FOCUS: only recording_2 now. It is the motion… #6"
+
+Session:        local-2ebdb878d035c4620a0b44774c7650e0561aa4ea525d31abb201c903429f475a
+Title:          FOCUS: only recording_2 now. It is the motion… #6
+Duration:       20s
+Messages:       9 (1 user, 7 tool calls)

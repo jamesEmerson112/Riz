@@ -1,0 +1,2 @@
+{"source":"note","ts":1794130014.072031,"type":"host","ev":"agent_note","sim":true,"text":"clock_skew: The MCU's millisecond counter runs at 0.50x real time. The running image (pod v1.2-clock-hsi2-sim 2026-11-07T22:30:00Z) is the newest; the known-good image A1C69398 ran clean. Rolling back to known-good (sim stand-in for fw_rollback)."}
+{"source":"audit","ts":1794130014.072227,"tool":"fw_rollback","args":{"to":"known-good"},"ok":true,"duration_s":4.01,"sim":true}

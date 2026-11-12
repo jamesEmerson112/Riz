@@ -1,0 +1,70 @@
+# 2026-11-08 10:43:37 PST hermes chat --oneshot -t so101_arm,mcp-naive_board -q <prompt for crd_qh49rphak6ab81q2v4p8dy1qw3>
+Query: You are the arm commander for our robot-arm company. Your job is card 
+crd_qh49rphak6ab81q2v4p8dy1qw3 on the Naïve board 
+brd_v2zcnyzc559hv8awzc4hqvgcsm; other cards on that board are not yours, so 
+leave them alone. Read card crd_qh49rphak6ab81q2v4p8dy1qw3 and its comments, 
+then do the job it describes with the so101_arm tools. Rules: only the arm_* 
+skills move the arm. Use the healer tools only after a skill reports an incident
+or a tool call is blocked: call arm_status, fix the cause, and retry that step 
+once. A stuck or frozen distance: arm_restart_sensor. A sensor-pod fault 
+(arm_status lists pod incidents): the pod's own healer fixes it within a minute,
+so call arm_status every few seconds until the arm's incidents are empty, and 
+use arm_check only once the pod's incidents are gone. Anything else: arm_check. 
+When the job is done, add a comment on card crd_qh49rphak6ab81q2v4p8dy1qw3 
+starting 'RESULT:' that says what you did and any fault you healed, then move 
+card crd_qh49rphak6ab81q2v4p8dy1qw3 to done with a one-sentence note. If you 
+can't finish, comment 'BLOCKED:' on card crd_qh49rphak6ab81q2v4p8dy1qw3 with the
+reason.
+🔎 Searching tools · naive_board card get comments list
+✗ Reading tool details · 13 tools [too many names: 13 > max 10. Retry with fewer...]
+📖 Reading tool details · 10 tools
+📖 Reading tool details · 2 tools
+🔌 Naive Board · boards get card  75.3s
+  (tip) That tool ran for a while. Use /verbose to cycle tool-progress display modes (all -> new -> off -> verbose). This tip only shows once.
+⚡ Arm_status
+
+────────────────────────────────────────
+**Searching for card comments**
+∴ Thought for 0s
+────────────────────────────────────────
+
+📖 Reading tool details · 1 tool
+
+────────────────────────────────────────
+**Discovering wave actions**
+∴ Thought for 0s
+────────────────────────────────────────
+
+📖 Reading tool details · 4 tools
+⚡ Arm_go_home  1.9s
+⚡ Arm_wave  18.0s
+⚡ Arm_go_home  1.9s
+
+────────────────────────────────────────
+**Adding the comment**
+∴ Thought for 0s
+────────────────────────────────────────
+
+🔌 Naive Board · boards create comment  23.0s
+🔌 Naive Board · boards patch card  0.6s
+
+────────────────────────────────────────
+**Verifying read card**
+∴ Thought for 0s
+────────────────────────────────────────
+
+🔌 Naive Board · boards get card  2.0s
+
+────────────────────────────────────────
+☤ Hermes
+Completed: the arm went home, waved hello, and returned home. No faults needed healing. The card is marked done with a RESULT comment and note.
+────────────────────────────────────────
+
+Resume this session with:
+  hermes --resume local-d726469699914c84a009be1a7eb936ecf3f835e86329b0cb9c4fc466679c6541
+  hermes -c "You are the arm commander for our robot-arm… #4"
+
+Session:        local-d726469699914c84a009be1a7eb936ecf3f835e86329b0cb9c4fc466679c6541
+Title:          You are the arm commander for our robot-arm… #4
+Duration:       2m 39s
+Messages:       28 (1 user, 26 tool calls)

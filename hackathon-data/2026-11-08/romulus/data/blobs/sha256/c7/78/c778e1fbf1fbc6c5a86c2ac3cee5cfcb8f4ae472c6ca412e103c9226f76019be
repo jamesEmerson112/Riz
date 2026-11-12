@@ -1,0 +1,2 @@
+{"source":"note","ts":1794129662.37618,"type":"host","ev":"agent_note","sim":true,"text":"us_mismatch: Ultrasonic distance disagrees with its own echo time: echo 220 us means ~38 mm, but the firmware reports 5 mm (20 of 39 samples wrong). The running image (pod v1.7-us-dist-16bit-sim 2026-11-07T23:00:00Z) is the newest; the known-good image A1C69398 ran clean. Rolling back to known-good (sim stand-in for fw_rollback)."}
+{"source":"audit","ts":1794129662.3763762,"tool":"fw_rollback","args":{"to":"known-good"},"ok":true,"duration_s":4.01,"sim":true}

@@ -1,0 +1,1 @@
+{"kind":"run","schema":"arm-run/v1","run_id":"20261107-221143-3898c2","source":"sim","arm":"sim-so101","task":"check","started":"2026-11-07T22:11:43-0800","joints":[],"units":{"pos":"deg (arm joints), 0-100 (gripper, 0 = closed)","load":"N*m","dist":"mm, us as in the pod's D rows"},"label":{"fault":null}}

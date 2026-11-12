@@ -1,0 +1,113 @@
+{
+ "lean": true,
+ "tries": [
+  {
+   "try": "p4",
+   "probe": true,
+   "go": false,
+   "recording": "recording_2",
+   "pan": 10.0,
+   "speed": 0.5,
+   "grasped": null,
+   "holding_s": null,
+   "jaws_tip_m": [
+    0.107,
+    -0.092,
+    0.026
+   ],
+   "jaws_cell": "D8",
+   "edge_cell": "D8",
+   "note": "The open jaws appear both on top of the bag, roughly half a cell above its nearest lower edge, rather than straddling it with one jaw undern"
+  },
+  {
+   "try": "p5",
+   "probe": true,
+   "go": false,
+   "recording": "recording_2",
+   "pan": -10.0,
+   "speed": 0.5,
+   "grasped": null,
+   "holding_s": null,
+   "jaws_tip_m": [
+    0.133,
+    -0.063,
+    0.025
+   ],
+   "jaws_cell": "F8",
+   "edge_cell": "E9",
+   "note": "The open jaws appear both over the bag's face rather than straddling its edge; the nearest red edge is roughly one cell down and left, with "
+  },
+  {
+   "try": "p6",
+   "probe": true,
+   "go": false,
+   "recording": "recording_2",
+   "pan": 7.0,
+   "speed": 0.5,
+   "grasped": null,
+   "holding_s": null,
+   "jaws_tip_m": [
+    0.11,
+    -0.088,
+    0.025
+   ],
+   "jaws_cell": "D8",
+   "edge_cell": "E9",
+   "note": "Both jaws are on top of the red bag near its white label, roughly half a grid cell inward from the nearest edge, rather than straddling it."
+  },
+  {
+   "try": "p7",
+   "probe": true,
+   "go": false,
+   "recording": "recording_3",
+   "pan": -5.0,
+   "speed": 0.5,
+   "grasped": null,
+   "holding_s": null,
+   "jaws_tip_m": [
+    0.159,
+    -0.09,
+    0.021
+   ],
+   "jaws_cell": "E8",
+   "edge_cell": "E8",
+   "note": "The open jaws lie over the bag's sloping right edge, with the left jaw on its upper surface and the right jaw outside it about half a cell t"
+  },
+  {
+   "try": "p8",
+   "probe": true,
+   "go": false,
+   "recording": "recording_3",
+   "pan": -8.0,
+   "speed": 0.5,
+   "grasped": null,
+   "holding_s": null,
+   "jaws_tip_m": [
+    0.164,
+    -0.084,
+    0.021
+   ],
+   "jaws_cell": "F8",
+   "edge_cell": "E8",
+   "note": "The open jaws are above and to the right of the bag\u2019s near edge by roughly half to one grid cell, with no jaw visibly underneath it to clamp"
+  },
+  {
+   "try": "p9",
+   "probe": true,
+   "go": false,
+   "recording": "recording_3",
+   "pan": -2.0,
+   "speed": 0.5,
+   "grasped": null,
+   "holding_s": null,
+   "jaws_tip_m": [
+    0.155,
+    -0.096,
+    0.021
+   ],
+   "jaws_cell": "E8",
+   "edge_cell": "E9",
+   "note": "The open jaws appear both above the bag rather than straddling its edge, with the nearest edge roughly half a cell below them."
+  }
+ ]
+}

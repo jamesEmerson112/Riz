@@ -1,0 +1,26 @@
+{
+ "since": 1794127823.7065642,
+ "cursors": {
+  "incidents": {
+   "inode": 180672170,
+   "offset": 2882
+  },
+  "audit": {
+   "inode": 180672438,
+   "offset": 671
+  },
+  "events": {
+   "inode": 180672169,
+   "offset": 23771
+  }
+ },
+ "faults": [],
+ "build": "v1.1-sim@A1C69398",
+ "stream_build": "v1.1-sim@A1C69398",
+ "reported": [
+  "clock_skew-1794127875",
+  "clock_skew-1794129180",
+  "us_mismatch-1794129658",
+  "clock_skew-1794130010"
+ ]
+}

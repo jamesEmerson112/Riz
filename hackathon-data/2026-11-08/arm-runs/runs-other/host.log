@@ -1,0 +1,9 @@
+arm host listening on /var/folders/86/5c7978_12m50qsjctmhrqdym0000gn/T/armsim.sock (run record 20261107-215014-a32c33.jsonl)
+{"req": "{\"op\": \"status\"}", "reply": {"ok": true, "status": [0, 0, 0, 0, 0, 0], "grasp": {"holding": false, "gripper": 0.0, "load_nm": 2.94}, "incidents": []}}
+{"req": "{\"op\": \"skill\", \"name\": \"approach\"}", "reply": {"ok": true, "skill": "approach", "result": {"arrived": true, "max_err_deg": 0.02, "seconds": 0.0, "steps": 7, "readings": [110, 105, 100, 95, 90, 85, 80, 75], "switched_at_mm": 75}, "t": 6.8}}
+{"req": "{\"op\": \"status\"}", "reply": {"ok": true, "status": [0, 0, 0, 0, 0, 0], "grasp": {"holding": false, "gripper": 60.0, "load_nm": 0.003}, "incidents": []}}
+{"req": "{\"op\": \"skill\", \"name\": \"grip\"}", "reply": {"ok": true, "skill": "grip", "result": {"max_err_deg": 0.02, "seconds": 0.0, "grasp": {"holding": true, "gripper": 17.8, "load_nm": 2.687}, "status": [0, 0, 0, 0, 0, 0]}, "t": 8.2}}
+{"req": "{\"op\": \"status\"}", "reply": {"ok": true, "status": [0, 0, 0, 0, 0, 0], "grasp": {"holding": true, "gripper": 17.8, "load_nm": 2.687}, "incidents": []}}
+{"req": "{\"op\": \"skill\", \"name\": \"lift\"}", "reply": {"ok": true, "skill": "lift", "result": {"arrived": true, "max_err_deg": 0.02, "seconds": 0.0, "grasp": {"holding": true, "gripper": 17.8, "load_nm": 2.593}}, "t": 9.3}}
+{"req": "{\"op\": \"shutdown\"}", "reply": {"ok": true, "bye": true}}
+gif: /Users/mrbam/Github/GitHub/Naive Nous YC Hackathon/.claude/worktrees/scheduled-md-sync-task-49ac70/prototypes/arm-sim/runs/20261107-215014-a32c33.gif

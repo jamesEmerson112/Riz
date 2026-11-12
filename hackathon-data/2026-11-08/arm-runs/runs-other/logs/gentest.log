@@ -1,0 +1,10 @@
+generate and test: up to 6 tries; log /Users/mrbam/Github/GitHub/Naive Nous YC Hackathon/.claude/worktrees/scheduled-md-sync-task-49ac70/prototypes/arm-sim/runs/gentest/trials.jsonl
+arm host: down
+try 1: wave pan +0 -> no grasp (held 0.49 s, peak grip load 0.87 N*m), eye: NOT, 19.9 s, alarms [0, 0, 0, 0, 0, 0]
+try 2: recording_2 pan +0 -> no grasp (held 0.12 s, peak grip load 0.8 N*m), eye: NOT, 21.2 s, alarms [0, 0, 0, 0, 0, 0]
+try 3: recording_3 pan +0 -> no grasp (held 0.28 s, peak grip load 0.83 N*m), eye: NOT, 21.2 s, alarms [0, 0, 0, 0, 0, 0]
+try 4: wave pan +5 -> no grasp (held 0.46 s, peak grip load 0.89 N*m), eye: NOT, 19.8 s, alarms [0, 0, 0, 0, 0, 0]
+try 5: recording_2 pan +5 -> no grasp (held 0.13 s, peak grip load 0.79 N*m), eye: NOT, 21.5 s, alarms [0, 0, 0, 0, 0, 0]
+try 6: recording_3 pan +5 -> no grasp (held 0.28 s, peak grip load 0.87 N*m), eye: NOT, 21.2 s, alarms [0, 0, 0, 0, 0, 0]
+no success within the cap
+timed out

@@ -1,0 +1,186 @@
+diff --git a/prototypes/arm-sim/armsim/gentest.py b/prototypes/arm-sim/armsim/gentest.py
+index 0d65daf..ca87fe9 100644
+--- a/prototypes/arm-sim/armsim/gentest.py
++++ b/prototypes/arm-sim/armsim/gentest.py
+@@ -1,7 +1,11 @@
+ """Generate and test: try the chips pick-and-place on the real arm until the eye says the bag is in the box.
+ 
+     python -m armsim.gentest run [--max-trials 6]        # on the Mac: the loop (stops the Pi's arm host, restarts it)
+-    python -m armsim.gentest trial --rec wave --pan 5    # on the Pi: one candidate (the arm host must be stopped)
++    python -m armsim.gentest run --guide hermes [--task red|any] [--note "..."]
++                                                         # Hermes designs each test; red = the red bag (default),
++                                                         # any = any bag of chips; --note is a person's hint
++    python -m armsim.gentest trial --rec wave --pan 5 [--drop-pan 8]
++                                                         # on the Pi: one candidate (the arm host must be stopped)
+ 
+ Generate: Andre's three taught chips motions (wave.json, recording_2, recording_3), first as recorded, then
+ rotated at the base by small steps (pan +-5, +-10 degrees), so every candidate stays inside the space his
+@@ -31,6 +35,14 @@ OUT = Path(__file__).resolve().parents[1] / "runs" / "gentest"
+ # The debugger and the eye run on Astra (the default profile stays as it is); ARMSIM_HERMES_MODEL overrides.
+ HERMES_MODEL = ["-m", os.environ.get("ARMSIM_HERMES_MODEL", "gpt-6-astra"), "--provider", "openai-codex"]
+ FRAME = "metres from the centre of the arm's base: x forward (where the arm faces at pan 0), y to the arm's left, z up (the twin's estimated calibration)"
++# The two tasks: which bag has to end up in the box. "red" is the bag the demo uses.
++TASKS = {
++    "red": {"goal": "the red bag of chips", "rule": "Other bags on the bench don't count."},
++    "any": {"goal": "a bag of chips", "rule": "Any one bag of chips on the bench counts: go for whichever is easiest to reach."},
++}
++DEFAULT_TASK = "red"
++TURN_AFTER, TURN_OVER = 25, 50       # frames (50 a second): the base starts turning to drop_pan 0.5 s after the
++                                     # jaws close (they are shut by then) and gets there 1 s later
+ 
+ 
+ class GripEvents:
+@@ -56,17 +68,34 @@ class GripEvents:
+         return None
+ 
+ 
+-def planned_points(rec, pan):
++def shifted(frames, pan, drop_pan=None):
++    """The recording rotated at the base: by pan for the reach and the grasp, then (if drop_pan differs) a
++    smooth turn to drop_pan once the jaws have shut, for the carry and the drop. Both stay within +-10."""
++    drop_pan = pan if drop_pan is None else drop_pan
++    ev, grasp = GripEvents(), None
++    for i, f in enumerate(frames):
++        if ev.step(f[5]) == "close_at":
++            grasp = i
++            break
++    out = []
++    for i, f in enumerate(frames):
++        k = 0.0 if grasp is None else min(1.0, max(0.0, (i - grasp - TURN_AFTER) / TURN_OVER))
++        out.append([f[0] + pan + k * (drop_pan - pan), *f[1:]])
++    return out
++
++
++def planned_points(rec, pan, drop_pan=None):
+     """Where the recording puts the gripper tip when it closes the jaws and when it opens them again (the
+-    twin's forward kinematics on the recorded frames, rotated by pan): for tries with no measurement."""
++    twin's forward kinematics on the recorded frames, rotated by pan and drop_pan): for tries with no measurement."""
+     from .arm import SimArm
+     import mujoco
+-    frames = json.loads((LIB / f"{rec}.json").read_text())["frames"]
++    raw = json.loads((LIB / f"{rec}.json").read_text())["frames"]
++    frames = shifted(raw, pan, drop_pan)
+     arm, out, ev = SimArm(), {}, GripEvents()
+     for i in range(len(frames)):
+         event = ev.step(frames[i][5])
+         if event:
+-            f = [frames[i][0] + pan, *frames[i][1:]]
++            f = frames[i]
+             arm.d.qpos[arm._qadr] = arm._raw(f)
+             mujoco.mj_forward(arm.m, arm.d)
+             out[event] = {"tip_m": [round(float(v), 3) for v in arm.d.site_xpos[arm._tip]],
+@@ -80,10 +109,11 @@ def candidates(n):
+ 
+ 
+ # ---- on the Pi: one candidate on the real arm -----------------------------------------------------------
+-def trial(rec, pan, speed=1.0):
++def trial(rec, pan, speed=1.0, drop_pan=None):
+     from .real import RealArm
++    drop_pan = pan if drop_pan is None else drop_pan
+     prim = json.loads((LIB / f"{rec}.json").read_text())
+-    prim = {**prim, "frames": [[f[0] + pan, *f[1:]] for f in prim["frames"]]}
++    prim = {**prim, "frames": shifted(prim["frames"], pan, drop_pan)}
+     arm = RealArm().connect()
+     rest = arm.read()
+     seen = {"holding_s": 0.0, "widest_hold": 0.0, "peak_grip_load_nm": 0.0, "last": time.monotonic(),
+@@ -113,7 +143,7 @@ def trial(rec, pan, speed=1.0):
+     finally:
+         arm.hooks.remove(watch)
+     back = arm.goto(rest, duration=1.5)
+-    out = {"recording": rec, "pan_offset": pan, "speed": speed, "arrived": r.get("arrived"), "max_err_deg": r.get("max_err_deg"),
++    out = {"recording": rec, "pan_offset": pan, "drop_pan": drop_pan, "speed": speed, "arrived": r.get("arrived"), "max_err_deg": r.get("max_err_deg"),
+            "seconds": round(time.time() - t0, 1), "grasped": seen["holding_s"] >= 0.5,
+            "holding_s": round(seen["holding_s"], 2), "widest_hold": round(seen["widest_hold"], 1),
+            "peak_grip_load_nm": round(seen["peak_grip_load_nm"], 2), "alarms": arm.status(),
+@@ -150,9 +180,9 @@ def snap(tag):
+     return p
+ 
+ 
+-def judge(image):
++def judge(image, task=DEFAULT_TASK):
+     """Hermes's vision on one camera frame: INSIDE / NOT / UNSURE."""
+-    q = (f"Use your vision tool on the image file {image}. Is a bag of chips inside the open cardboard box? "
++    q = (f"Use your vision tool on the image file {image}. Is {TASKS[task]['goal']} inside the open cardboard box? "
+          "Reply with exactly one word: INSIDE, NOT, or UNSURE.")
+     try:
+         r = subprocess.run(["hermes", "chat", "--oneshot", *HERMES_MODEL, "-t", "vision", "-q", q], capture_output=True,
+@@ -166,10 +196,10 @@ def judge(image):
+     return "UNSURE", "no verdict in the reply"
+ 
+ 
+-def run(max_trials):
++def run(max_trials, task=DEFAULT_TASK):
+     OUT.mkdir(parents=True, exist_ok=True)
+     log = OUT / "trials.jsonl"
+-    print(f"generate and test: up to {max_trials} tries; log {log}", flush=True)
++    print(f"generate and test, goal: {TASKS[task]['goal']} into the box; up to {max_trials} tries; log {log}", flush=True)
+     rc, out, err = ssh(HOST_DOWN)
+     print("arm host:", out.strip() or err.strip(), flush=True)
+     try:
+@@ -185,8 +215,8 @@ def run(max_trials):
+                 break
+             time.sleep(2)
+             after = snap(f"t{i}-after")
+-            verdict, note = judge(after)
+-            row = {"try": i, **res, "eye": verdict, "eye_note": note, "before": str(before), "after": str(after),
++            verdict, note = judge(after, task)
++            row = {"try": i, "task": task, **res, "eye": verdict, "eye_note": note, "before": str(before), "after": str(after),
+                    "ts": time.time()}
+             with open(log, "a") as f:
+                 f.write(json.dumps(row) + "\n")
+@@ -208,7 +238,6 @@ def run(max_trials):
+ 
+ SPEEDS = (0.5, 1.0)                                  # the slowest and fastest replay Hermes may ask for
+ PLAN_LOG = OUT / "hermes-trials.jsonl"
+-GOAL = os.environ.get("ARMSIM_GOAL", "the red bag of chips")      # the bag the demo uses
+ 
+ 
+ def last_json(text):
+@@ -231,29 +260,37 @@ def last_json(text):
+     return best
+ 
+ 
+-def plan(history, before, after):
++def plan(history, before, after, task=DEFAULT_TASK, note=None):
+     """Hermes debugs the last try and designs the next test. The code clamps whatever it asks for."""
+-    tries = []
++    goal, tries = TASKS[task]["goal"], []
+     for h in history[-12:]:
+-        row = {k: h.get(k) for k in ("try", "recording", "pan_offset", "speed", "grasped", "holding_s",
+-                                     "widest_hold", "peak_grip_load_nm", "arrived", "eye", "debug")}
++        row = {k: h.get(k) for k in ("try", "task", "recording", "pan_offset", "drop_pan", "speed", "grasped",
++                                     "holding_s", "widest_hold", "peak_grip_load_nm", "arrived", "eye", "debug")}
++        if row["drop_pan"] is None:
++            row["drop_pan"] = row["pan_offset"]          # older tries turned the whole motion by one angle
+         if h.get("close_at") or h.get("open_at"):
+             row.update(gripper_closed_at=h.get("close_at"), gripper_opened_at=h.get("open_at"), points="measured")
+         else:
+-            pts = planned_points(h["recording"], float(h.get("pan_offset") or 0.0))
++            pts = planned_points(h["recording"], float(h.get("pan_offset") or 0.0), row["drop_pan"])
+             row.update(gripper_closed_at=pts.get("close_at"), gripper_opened_at=pts.get("open_at"),
+                        points="planned (from the recording; no measurement for this try)")
+         tries.append(row)
+-    context = {"coordinate_frame": FRAME, "joint_order": ["shoulder_pan", "shoulder_lift", "elbow_flex",
+-               "wrist_flex", "wrist_roll", "gripper"], "tries": tries}
++    context = {"task": goal, "coordinate_frame": FRAME, "joint_order": ["shoulder_pan", "shoulder_lift",
++               "elbow_flex", "wrist_flex", "wrist_roll", "gripper"], "tries": tries}
++    if note:
++        context["note_from_the_bench"] = note
+     OUT.mkdir(parents=True, exist_ok=True)
+     (OUT / "context.json").write_text(json.dumps(context, indent=1) + "\n")
+     rows = json.dumps(context, indent=1)
+-    q = (f"You are debugging a robot arm on a bench. The task: pick up {GOAL} and put it in the open cardboard "
+-         "box. Other bags on the bench don't count. The arm can only replay one of three motions taught by hand (recordings: wave, recording_2, "
++    q = (f"You are debugging a robot arm on a bench. The task: pick up {goal} and put it in the open cardboard "
++         f"box. {TASKS[task]['rule']} The arm can only replay one of three motions taught by hand (recordings: wave, recording_2, "
+          "recording_3), each a pick-and-place, optionally rotated at the base by pan degrees (-10 to +10; which way "
+          "positive turns as seen from the camera is unknown, so infer it from the history) and slowed by speed "
+-         "(0.5 to 1.0, lower is slower). The gripper data per try: holding_s is how long the jaws were stopped open "
++         "(0.5 to 1.0, lower is slower). pan sets the reach and the grasp; drop_pan (-10 to +10) sets the carry and "
++         "the drop: half a second after the jaws close the base turns smoothly from pan to drop_pan, so you can keep "
++         "a grasp that worked and move only where the bag is let go (drop_pan = pan turns the whole motion as one). "
++         + (f"A note from the person at the bench (trust it over your own reading of the images): {note} " if note else "") +
++         "The gripper data per try: holding_s is how long the jaws were stopped open "
+          "under load while told to close (0.5 s or more counts as a grasp), widest_hold is how far open they stopped "
+          "(0-100), peak_grip_load_nm is the gripper's peak load, gripper_closed_at / gripper_opened_at are where the "
+          "gripper tip was (and the joint angles) when the jaws closed for the grasp and opened for the drop. "
